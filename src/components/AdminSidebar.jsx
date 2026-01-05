@@ -1,83 +1,109 @@
 "use client";
-import { useDialogs } from "@/context/DialogsContext";
-import { useLayoutContext } from "@/context/LayoutContext";
-import { logout } from "@/utils/auth";
-import { Briefcase, ExternalLink, Menu, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
-import UserInfoView from "./UserInfoView";
+import { useState } from "react";
+import { Briefcase, ExternalLink, Menu, Users, X } from "lucide-react";
 
-function AdminSidebar({ activeTabName }) {
-  const { sidebarOpen, toggleSidebar } = useLayoutContext();
-  const router = useRouter();
-  const { confirm } = useDialogs();
+function AdminSidebar({ activeTabName = "accounts" }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const navItems = [
+    { name: "accounts", icon: Users, label: "Accounts" },
+    { name: "projects", icon: Briefcase, label: "Projects" },
+  ];
 
   return (
-    <div
-      className={`bg-gray-800 fixed bottom-0 top-0 text-white z-10 ${
-        sidebarOpen ? "w-16" : "w-64"
-      } flex flex-col transition-all duration-300`}
-    >
-      {/* Toggle button */}
-      <button
-        onClick={toggleSidebar}
-        className="absolute top-4 left-4 z-10 text-white cursor-pointer"
+    <>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div
+        className={`fixed top-0 left-0 h-full bg-gradient-to-b from-slate-900 to-slate-800 text-white z-50 shadow-2xl transition-all duration-300 ease-in-out ${
+          sidebarOpen ? "w-64" : "w-0 lg:w-20"
+        } overflow-hidden`}
       >
-        <Menu size={29} color="white" />
-      </button>
+        {/* Header */}
+        <div className="h-20 flex items-center justify-between px-6 border-b border-slate-700/50">
+          <div className={`font-bold text-xl ${!sidebarOpen && "lg:hidden"}`}>
+            Admin
+          </div>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 rounded-lg hover:bg-slate-700/50 transition-colors"
+          >
+            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
 
-      <UserInfoView sidebarOpen={sidebarOpen} />
+        {/* User Section */}
+        <div className="px-6 py-6 border-b border-slate-700/50">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-semibold">
+              A
+            </div>
+            <div className={`${!sidebarOpen && "lg:hidden"} overflow-hidden`}>
+              <div className="font-medium text-sm">Admin User</div>
+              <div className="text-xs text-slate-400">admin@example.com</div>
+            </div>
+          </div>
+        </div>
 
-      {/* Navigation */}
-      <nav className="pt-4">
-        <ul>
-          <li>
-            <button
-              onClick={() => router.push("/admin/accounts")}
-              className={`flex items-center px-4 py-3 w-full cursor-pointer ${
-                activeTabName === "accounts"
-                  ? "bg-gray-700"
-                  : "hover:bg-gray-700"
-              }`}
-            >
-              <Users size={22} color="white" />
-              {!sidebarOpen && <span className="ml-3">Accounts</span>}
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => router.push("/admin/projects")}
-              className={`flex items-center px-4 py-3 w-full cursor-pointer ${
-                activeTabName === "projects"
-                  ? "bg-gray-700"
-                  : "hover:bg-gray-700"
-              }`}
-            >
-              <Briefcase size={22} color="white" />
-              {!sidebarOpen && <span className="ml-3">Projects</span>}
-            </button>
-          </li>
-        </ul>
-      </nav>
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-6">
+          <ul className="space-y-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTabName === item.name;
+              
+              return (
+                <li key={item.name}>
+                  <button
+                    className={`w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? "bg-blue-600 shadow-lg shadow-blue-600/30"
+                        : "hover:bg-slate-700/50"
+                    } group`}
+                  >
+                    <Icon size={22} className={isActive ? "text-white" : "text-slate-300"} />
+                    <span
+                      className={`ml-4 font-medium ${
+                        !sidebarOpen && "lg:hidden"
+                      } ${isActive ? "text-white" : "text-slate-300"}`}
+                    >
+                      {item.label}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
 
-      {/* Logout button */}
-      <div className="p-4 border-t border-gray-700">
-        <button
-          className="flex items-center text-white w-full cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-300"
-          onClick={async (e) => {
-            const confirmed = await confirm({
-              title: "Logout",
-              msg: "Are you sure you want to logout?",
-            });
-            if (!confirmed) return;
-            logout();
-            router.replace("/login");
-          }}
-        >
-          <ExternalLink size={22} color="white" />
-          {!sidebarOpen && <span className="ml-3">Logout</span>}
-        </button>
+        {/* Logout */}
+        <div className="px-3 pb-6">
+          <button
+            className="w-full flex items-center px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-200"
+          >
+            <ExternalLink size={22} />
+            <span className={`ml-4 font-medium ${!sidebarOpen && "lg:hidden"}`}>
+              Logout
+            </span>
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="fixed top-4 left-4 z-30 lg:hidden p-2 bg-slate-900 text-white rounded-lg shadow-lg"
+      >
+        <Menu size={24} />
+      </button>
+    </>
   );
 }
 
