@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ChevronRight, Database, Loader, Plus, Search } from "lucide-react";
+import { ChevronRight, Database, Loader, Plus, Search, X } from "lucide-react";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import { showDialog } from "@/components/CustomDialog";
 import { getSocket } from "@/utils/socket";
@@ -9,8 +9,10 @@ import { getSocket } from "@/utils/socket";
 import AddEditCollection from "./AddEditCollection";
 import { useDatabaseContext } from "@/context/DatabaseContext";
 import { toast } from "react-toastify";
+import { useLayoutContext } from "@/context/LayoutContext";
 
 function CollectionsBox() {
+  const { sidebarClosed } = useLayoutContext();
   const { activeProject } = useProjectsContext();
 
   const {
@@ -98,10 +100,17 @@ function CollectionsBox() {
       });
   }, [collectionsPage]);
 
+  const getLayoutClassnames = () => {
+    let classnames = "bg-white rounded-lg shadow overflow-hidden flex flex-col h-[77vh] ";
+    classnames += "w-full md:w-[calc((100vw-280px-7em)/2)] xl:w-[260px] "
+    if(sidebarClosed) classnames += "md:w-[calc(50vw-62px-1em)]"
+    return classnames;
+  }
+
   return (
     <div>
-      <div className="md:w-65 bg-white rounded-lg shadow overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-gray-200">
+      <div className={getLayoutClassnames()}>
+        <div className="p-4 border-b border-gray-200 h-[120px]">
           <h2 className="text-lg font-semibold mb-3 flex items-center justify-between text-black">
             <span className="flex items-center">
               <Database className="w-5 h-5 mr-2 text-gray-800" />
@@ -123,18 +132,15 @@ function CollectionsBox() {
               <Plus className="w-4 h-4 text-gray-800" />
             </button>
           </h2>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search collections..."
-              className="w-full px-4 py-2 border rounded-lg pr-10 text-sm text-black"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Search className="absolute right-3 top-2.5 text-gray-400 w-4 h-4" />
-          </div>
+
+          <SearchBox 
+            searchTerm={searchTerm} 
+            setSearchTerm={setSearchTerm} 
+            onClear={() => setSearchTerm("")}
+          />
+          
         </div>
-        <div className="flex-1 overflow-y-auto min-h-120 max-h-160">
+        <div className="flex-1 overflow-y-auto">
           {loadingCollections ? (
             <div className="flex justify-center items-center p-8">
               <Loader className="w-6 h-6 animate-spin text-gray-800" />
@@ -194,3 +200,30 @@ function CollectionsBox() {
 }
 
 export default CollectionsBox;
+
+const SearchBox = ({searchTerm, setSearchTerm, onClear}) => {
+  return (
+    <div className="relative">
+      <button
+        onClick={() => onClear()}
+        className={`absolute left-3 top-2 overflow-hidden transition-all duration-150 ease-in-out cursor-pointer w-0 h-0 ${searchTerm ? "w-6 h-6 z-10": ""}`}
+        >
+        <X className="text-gray-700 w-6 h-6" />
+      </button>
+      <input
+        type="text"
+        placeholder="Search collections..."
+        className={`w-full px-[16px] py-2 border border-gray-400 rounded-lg text-sm text-black transition-all duration-150 ease-in-out ${searchTerm ? "pl-[36px]" : ""}`}
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      {searchTerm && (
+        <button
+          onClick={() => setSearchTerm(searchTerm)}
+          >
+          <Search className="absolute right-3 top-2.5 text-gray-800 w-5 h-5 cursor-pointer" />
+        </button>
+      )}
+    </div>
+  );
+}

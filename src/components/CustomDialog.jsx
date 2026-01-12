@@ -45,7 +45,7 @@ export function showDialog({ content, params }) {
           id="dialog-content"
           className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4 transform scale-95 opacity-0 transition-all duration-300 ease-in-out"
         >
-          <div className="mb-4">
+          <div className="mb-2">
             <button
               className="absolute right-0 top-0 cursor-pointer p-4 hover:opacity-100 opacity-50 transition-all ease-in-out"
               onClick={closeDialog}

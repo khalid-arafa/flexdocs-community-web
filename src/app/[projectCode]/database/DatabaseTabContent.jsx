@@ -18,15 +18,16 @@ const DatabseTabContent = () => {
 
   return (
     <div className="bg-gray-100">
-      <div className="flex flex-col md:flex-row gap-4 max-w-6xl mx-auto">
-        {/* Collections Box */}
-        <CollectionsBox />
-
-        {/* Documents Box */}
-        <DocumentsBox />
-
-        {/* Document Details Box */}
-        <DocumentBox />
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-col xl:flex-row gap-4">
+          {/* Collections and Documents wrapper */}
+          <div className="flex flex-col md:flex-row gap-4 xl:contents">
+            <CollectionsBox />
+            <DocumentsBox />
+          </div>
+          
+          <DocumentBox />
+        </div>
       </div>
     </div>
   );

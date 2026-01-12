@@ -5,13 +5,16 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { checkCodeValidity, createProject } from "@/utils/api";
-import UserSideSection from "../UserSideSection";
 import { Check, Loader, X } from "lucide-react";
 import { useProjectsContext } from "@/context/ProjectsContext";
+import UserSidebar from "@/components/UserSidebar";
+import { useLayoutContext } from "@/context/LayoutContext";
+import AdminSidebarContent from "@/components/AdminSidebar";
 
 export default function NewProject() {
   const router = useRouter();
   const { loadProjects } = useProjectsContext();
+  const {sidebarClosed} = useLayoutContext();
 
   const [error, setError] = useState("");
   const [codeError, setCodeError] = useState("");
@@ -96,16 +99,16 @@ export default function NewProject() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-100 to-blue-50">
-      <div className="max-w-8xl mx-auto flex flex-col lg:flex-row">
+      <div className="max-w-8xl mx-auto flex flex-col lg:flex-row w-full">
         {/* left */}
-        <UserSideSection withBack />
+        <AdminSidebarContent />
 
-        <div className="min-h-screen bg-gray-100 max-w-3xl w-full flex flex-col justify-center">
+        <div className={`min-h-screen bg-gray-100 flex flex-col justify-center transition-all duration-400 ease-in-out w-full max-w-[1024px] ${!sidebarClosed ? "ml-[300px]" : "ml-16"}`}>
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, ease: "easeInOut", delay: 0.2 }}
-            className="p-6"
+            className="p-6 w-full"
           >
             <div className="px-4 sm:px-6 lg:px-8 py-8">
               <div className="flex flex-col justify-between mb-6">

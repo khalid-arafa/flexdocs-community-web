@@ -3,90 +3,67 @@ import { useDialogs } from "@/context/DialogsContext";
 import { useLayoutContext } from "@/context/LayoutContext";
 import { logout } from "@/utils/auth";
 import {
-  Database,
   ExternalLink,
-  Folder,
   Menu,
-  Settings,
-  Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import UserInfoView from "./UserInfoView";
+import Image from "next/image";
 
-function UserSidebar({ title, projectCode }) {
-  const { sidebarOpen, toggleSidebar } = useLayoutContext();
+function UserSidebar({ children }) {
+  const { sidebarClosed, toggleSidebar } = useLayoutContext();
 
   const router = useRouter();
   const { confirm } = useDialogs();
 
+  const getClassnames = () => {
+    let classnames = "bg-[#0F172A] fixed bottom-0 top-0 text-white z-10 flex flex-col transition-all duration-300 border-r border-[#1e293b] ";
+    classnames += sidebarClosed ? "-left-[62px] md:left-0 w-[62px]" : "w-[300px]";
+    return classnames;
+  }
+
   return (
     <div
-      className={`bg-gray-800 fixed bottom-0 top-0 text-white z-10 ${
-        sidebarOpen ? "w-16" : "w-64"
-      } flex flex-col transition-all duration-300`}
+      className={getClassnames()}
     >
       {/* Toggle button */}
-      <button
-        onClick={toggleSidebar}
-        className="absolute top-4 left-4 z-10 text-white cursor-pointer"
-      >
-        <Menu size={29} color="white" />
-      </button>
+      <div className="flex flex-row relative">
+        <button
+          onClick={() => {            
+            toggleSidebar();
+          }}
+          className={`absolute top-0 z-10 cursor-pointer ${!sidebarClosed ? "right-0" : "-right-[62px] md:right-0"} w-[62px] h-[62px] flex justify-center items-center`}
+        >
+          <Menu size={29} className={`${!sidebarClosed ? "text-white" : "text-[#0F172A] md:text-white"}`} />
+        </button>
+      </div>
 
-      <UserInfoView sidebarOpen={sidebarOpen} withSettings={true} />
+      {!sidebarClosed && <div className="flex-flex-col mt-12 md:mt-24">
+        <div className="flex w-[200px] h-[70px] mx-auto mb-8">
+          <button 
+            className="relative hover:scale-110 transition-all ease-in-out overflow-auto cursor-pointer" 
+            onClick={() => {
+              router.push("/");
+              if(!sidebarClosed && window.innerWidth < 768) toggleSidebar();
+            }}
+          >
+            <Image src={"/images/logo-white.png"} alt="Logo" className="overflow-auto" width={200} height={70} />
+          </button>
+        </div>
+        <p className="text-lg leading-relaxed text-center text-[#ddd]">
+          Build, manage, and scale databases effortlessly.
+        </p>
+      </div>}
 
-      {/* Navigation */}
-      <nav className="pt-4">
-        <ul>
-          <li>
-            <button
-              onClick={() => router.push(`/${projectCode}/accounts`)}
-              className={`flex items-center px-4 py-3 w-full cursor-pointer ${
-                title === "accounts" ? "bg-gray-700" : "hover:bg-gray-700"
-              }`}
-            >
-              <Users size={22} color="white" />
-              {!sidebarOpen && <span className="ml-3">Accounts</span>}
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => router.push(`/${projectCode}/database`)}
-              className={`flex items-center px-4 py-3 w-full cursor-pointer ${
-                title === "database" ? "bg-gray-700" : "hover:bg-gray-700"
-              }`}
-            >
-              <Database size={22} color="white" />
-              {!sidebarOpen && <span className="ml-3">Database</span>}
-            </button>
-          </li>
-          <li className="pb-6">
-            <button
-              onClick={() => router.push(`/${projectCode}/storage`)}
-              className={`flex items-center px-4 py-3 w-full cursor-pointer ${
-                title === "storage" ? "bg-gray-700" : "hover:bg-gray-700"
-              }`}
-            >
-              <Folder size={22} color="white" />
-              {!sidebarOpen && <span className="ml-3">Storage</span>}
-            </button>
-          </li>
-          <li className="py-4 border-t border-gray-700">
-            <button
-              onClick={() => router.push(`/${projectCode}/settings`)}
-              className={`flex items-center px-4 py-3 w-full cursor-pointer ${
-                title === "settings" ? "bg-gray-700" : "hover:bg-gray-700"
-              }`}
-            >
-              <Settings size={22} color="white" />
-              {!sidebarOpen && <span className="ml-3">Project Settings</span>}
-            </button>
-          </li>
-        </ul>
-      </nav>
+      <div className="flex flex-col flex-1">
+        {children}
+      </div>
 
-      {/* Logout button */}
-      <div className="p-4 border-t border-gray-700">
+      <div className="z-10 px-0">
+        <UserInfoView sidebarClosed={ sidebarClosed } withSettings={true} />
+      </div>
+        
+      <div className="p-4 md:border-t md:border-gray-700 w-full">
         <button
           className="flex items-center text-white w-full cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-300"
           onClick={async (e) => {
@@ -100,7 +77,7 @@ function UserSidebar({ title, projectCode }) {
           }}
         >
           <ExternalLink size={22} color="white" />
-          {!sidebarOpen && <span className="ml-3">Logout</span>}
+          {!sidebarClosed && <span className="ml-3">Logout</span>}
         </button>
       </div>
     </div>

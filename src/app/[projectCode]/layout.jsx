@@ -10,7 +10,10 @@ import { useEffect, useState } from "react";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import FileUploader from "@/components/FileUploader";
 import UserSidebar from "@/components/UserSidebar";
-import { Loader } from "lucide-react";
+import { Database, Folder, Loader, Settings, Users } from "lucide-react";
+import Tooltip from "@/components/Tooltip";
+import { useRouter } from "next/navigation";
+import LayoutWrapper from "@/components/LayoutWrapper";
 
 export default function layout({ children }) {
   return (
@@ -30,7 +33,7 @@ export default function layout({ children }) {
 }
 
 const LayoutContent = ({ children }) => {
-  const { sidebarOpen } = useLayoutContext();
+  const { sidebarClosed, toggleSidebar } = useLayoutContext();
   const [isLoading, setIsLoading] = useState(true);
 
   const paths = usePathname();
@@ -39,10 +42,9 @@ const LayoutContent = ({ children }) => {
 
   const { loadActiveProject, activeProject } = useProjectsContext();
 
-  useEffect(() => {
-    
+  useEffect(() => {    
     const load = async () => {
-      await loadActiveProject(projectCode);  
+      await loadActiveProject(projectCode);
       setIsLoading(false);
     }
     if(!activeProject) load();    
@@ -60,18 +62,12 @@ const LayoutContent = ({ children }) => {
   }
 
   return (
-    <div className="flex bg-gray-100">
-      <UserSidebar activeTabName={title} projectCode={projectCode} />
-      <div
-        className={`flex-1 ${
-          sidebarOpen ? "ml-16" : "ml-64"
-        } transition-all duration-400 ease-in-out`}
-      >
-        {/* Topbar */}
+    <LayoutWrapper sidebar={<UserNavigation title={title} sidebarClosed={sidebarClosed} projectCode={activeProject.code} toggleSidebar={toggleSidebar} />}>
+      <div className="flex flex-col">
         <header className="bg-white shadow-sm">
           <div className="flex justify-between items-center px-6 py-4">
-            <div>
-              <h1 className="text-xl font-semibold capitalize text-gray-800">
+            <div className={`${sidebarClosed ? "pl-[32px] md:pl-0" : ""}`}>
+              <h1 className={`text-xl font-semibold capitalize text-gray-800`}>
                 {title}
               </h1>
             </div>
@@ -79,11 +75,79 @@ const LayoutContent = ({ children }) => {
         </header>
 
         {/* main children section */}
-        <main>{children}</main>
+        <main className="flex flex-1">{children}</main>
         <div className="fixed bottom-4 right-4 z-40">
           <FileUploader />
         </div>
       </div>
-    </div>
+    </LayoutWrapper>
   );
 };
+
+
+const UserNavigation = ({title, sidebarClosed, toggleSidebar, projectCode}) => {
+  const router = useRouter();
+  const onClick = (path) => {
+    router.push(`/${projectCode}/${path}`);
+    if(!sidebarClosed && window.innerWidth < 1024) toggleSidebar();
+  }
+  return <UserSidebar >
+    {/* Navigation */}
+    <nav className={`pt-4 w-full mt-4 md:mt-12`}>
+      <ul>
+        <li>
+          <Tooltip text={"Accounts"} className={"w-full"}>
+            <button
+              onClick={() => onClick("accounts")}
+              className={`flex items-center px-5 py-3 w-full cursor-pointer ${
+                title === "accounts" ? "bg-[#1e293b]" : "hover:bg-[#1e293b]"
+              }`}
+            >
+              <Users size={22} color="white" />
+              {!sidebarClosed && <span className="ml-3">Accounts</span>}
+            </button>
+          </Tooltip>
+        </li>
+        <li>
+          <Tooltip text={"Database"} className={"w-full"}>
+          <button
+            onClick={() => onClick("database")}
+            className={`flex items-center px-5 py-3 w-full cursor-pointer ${
+              title === "database" ? "bg-[#1e293b]" : "hover:bg-[#1e293b]"
+            }`}
+          >
+            <Database size={22} color="white" />
+            {!sidebarClosed && <span className="ml-3">Database</span>}
+          </button>
+          </Tooltip>
+        </li>
+        <li className="pb-6">
+          <Tooltip text={"Storage"} className={"w-full"}>
+            <button
+              onClick={() => onClick("storage")}
+              className={`flex items-center px-5 py-3 w-full cursor-pointer ${
+                title === "storage" ? "bg-[#1e293b]" : "hover:bg-[#1e293b]"
+              }`}
+            >
+              <Folder size={22} color="white" />
+              {!sidebarClosed && <span className="ml-3">Storage</span>}
+            </button>
+          </Tooltip>
+        </li>
+        <li className="pb-6">
+          <Tooltip text={"Settings"} className={"w-full"}>
+            <button
+              onClick={() => onClick("settings")}
+              className={`flex items-center px-5 py-3 w-full cursor-pointer ${
+                title === "settings" ? "bg-[#1e293b]" : "hover:bg-[#1e293b]"
+              }`}
+            >
+              <Settings size={22} color="white" />
+              {!sidebarClosed && <span className="ml-3">Project Settings</span>}
+            </button>
+          </Tooltip>
+        </li>
+      </ul>
+    </nav>
+  </UserSidebar>;
+}

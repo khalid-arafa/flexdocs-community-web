@@ -1,110 +1,82 @@
-"use client";
-import { useState } from "react";
-import { Briefcase, ExternalLink, Menu, Users, X } from "lucide-react";
+"use client"
 
-function AdminSidebar({ activeTabName = "accounts" }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+import React from 'react'
+import UserSidebar from './UserSidebar'
+import { useLayoutContext } from '@/context/LayoutContext'
 
-  const navItems = [
-    { name: "accounts", icon: Users, label: "Accounts" },
-    { name: "projects", icon: Briefcase, label: "Projects" },
-  ];
-
+function AdminSidebarContent() {
+  const {sidebarClosed} = useLayoutContext();
   return (
-    <>
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={`fixed top-0 left-0 h-full bg-gradient-to-b from-slate-900 to-slate-800 text-white z-50 shadow-2xl transition-all duration-300 ease-in-out ${
-          sidebarOpen ? "w-64" : "w-0 lg:w-20"
-        } overflow-hidden`}
-      >
-        {/* Header */}
-        <div className="h-20 flex items-center justify-between px-6 border-b border-slate-700/50">
-          <div className={`font-bold text-xl ${!sidebarOpen && "lg:hidden"}`}>
-            Admin
-          </div>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-slate-700/50 transition-colors"
-          >
-            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-
-        {/* User Section */}
-        <div className="px-6 py-6 border-b border-slate-700/50">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-semibold">
-              A
+    <UserSidebar>
+      {!sidebarClosed && <div className="relative z-10 py-16 px-4">
+        <div className="space-y-4 mt-8">
+          <div className="flex items-start space-x-3">
+            <div className="bg-[#64748B] p-2 rounded-full mt-1">
+              <svg
+                className="w-5 h-5 text-[#0F172A]"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z" />
+              </svg>
             </div>
-            <div className={`${!sidebarOpen && "lg:hidden"} overflow-hidden`}>
-              <div className="font-medium text-sm">Admin User</div>
-              <div className="text-xs text-slate-400">admin@example.com</div>
+            <div>
+              <h3 className="font-semibold text-lg">Team Collaboration</h3>
+              <p className="text-[#94A3B8]">
+                Multi-project workflows
+              </p>
             </div>
           </div>
+
+          <div className="flex items-start space-x-3">
+            <div className="bg-[#64748B] p-2 rounded-full mt-1">
+              <svg
+                className="w-5 h-5 text-[#0F172A]"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
+                  clipRule="evenodd"
+                />
+                <path d="M10 9a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1z" />
+                <path d="M14 13a1 1 0 100-2 1 1 0 000 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Simple Management</h3>
+              <p className="text-[#94A3B8]">
+                Centralized resource control
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start space-x-3">
+            <div className="bg-[#64748B] p-2 rounded-full mt-1">
+              <svg
+                className="w-5 h-5 text-[#0F172A]"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Fast & Reliable</h3>
+              <p className="text-[#94A3B8]">
+                Optimized for scale
+              </p>
+            </div>
+          </div>
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-6">
-          <ul className="space-y-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTabName === item.name;
-              
-              return (
-                <li key={item.name}>
-                  <button
-                    className={`w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 ${
-                      isActive
-                        ? "bg-blue-600 shadow-lg shadow-blue-600/30"
-                        : "hover:bg-slate-700/50"
-                    } group`}
-                  >
-                    <Icon size={22} className={isActive ? "text-white" : "text-slate-300"} />
-                    <span
-                      className={`ml-4 font-medium ${
-                        !sidebarOpen && "lg:hidden"
-                      } ${isActive ? "text-white" : "text-slate-300"}`}
-                    >
-                      {item.label}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        {/* Logout */}
-        <div className="px-3 pb-6">
-          <button
-            className="w-full flex items-center px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-200"
-          >
-            <ExternalLink size={22} />
-            <span className={`ml-4 font-medium ${!sidebarOpen && "lg:hidden"}`}>
-              Logout
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setSidebarOpen(true)}
-        className="fixed top-4 left-4 z-30 lg:hidden p-2 bg-slate-900 text-white rounded-lg shadow-lg"
-      >
-        <Menu size={24} />
-      </button>
-    </>
-  );
+      </div>}
+    </UserSidebar>
+  )
 }
 
-export default AdminSidebar;
+export default AdminSidebarContent

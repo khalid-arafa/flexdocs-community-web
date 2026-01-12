@@ -1,77 +1,75 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-// Dynamically import Monaco Editor to avoid SSR issues
 import dynamic from "next/dynamic";
 import { validateJSON } from "@/utils/json";
-export const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
-  ssr: false,
-});
+import Button from "./Button";
 
-export const monacoEditorOptions = {
-  minimap: { enabled: false },
-  automaticLayout: true,
-  formatOnPaste: true,
-  formatOnType: true,
-  scrollBeyondLastLine: false,
-  tabSize: 2,
-};
+const CodeEditor = dynamic(
+  () => import("@uiw/react-textarea-code-editor").then((mod) => mod.default),
+  { ssr: false }
+);
 
-function JsonEditor({ jsonData, onSave, onCancel, height = "400px" }) {
+function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundColor = "#f5f5f5", className}) {
   const [isChanged, setIsChanged] = useState(false);
   const [value, setValue] = useState(jsonData);
   const [isValid, setIsValid] = useState(true);
 
-  const handleEditorChange = (newValue) => {
+  const handleEditorChange = (evn) => {
+    const newValue = evn.target.value;
     setValue(newValue);
     if (!isValid) setIsValid(true);
     if (!isChanged) setIsChanged(true);
   };
 
-  const handleSave = () => {    
+  const handleSave = () => {
     if (isValid && onSave) {
       try {
         JSON.parse(value);
-        const errors = validateJSON(JSON.stringify(value));
+        const errors = validateJSON(value);
         if (errors) {
           console.log(errors);
           setIsValid(false);
           return;
         }
+        onSave(value);
       } catch (error) {
         setIsValid(false);
         return;
       }
-      onSave(value);
     }
   };
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.ctrlKey && event.key === 's') {        
+      if (event.ctrlKey && event.key === "s") {
         event.preventDefault();
         handleSave();
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleSave]);
 
   return (
-    <div className="flex flex-col w-full">
-      <div className="w-full border overflow-x-hidden border-gray-300">
-        <MonacoEditor
-          height={height}
-          language="json"
+    <div className={`flex flex-col w-full items-end`}>
+      <div className={`w-full overflow-hidden border ${className}`}>
+        <CodeEditor
           value={value}
+          language="json"
+          placeholder="Enter JSON here"
           onChange={handleEditorChange}
-          options={monacoEditorOptions}
-          theme="vs-light"
+          padding={15}
+          data-color-mode="light"
+          style={{
+            fontSize: 14,
+            backgroundColor: backgroundColor,
+            accentColor: "red",
+            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+            height: height,
+            overflow: "auto",
+          }}
         />
       </div>
 
@@ -81,40 +79,38 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px" }) {
         </div>
       )}
 
-      <div className="flex justify-end space-x-2 mt-4">
+      <div className="flex space-x-2 mt-4 w-[80%] justify-end">
         {onCancel && (
-          <button
-            onClick={(e) => onCancel()}
-            className={`px-4 py-2 rounded-md text-black bg-gray-200 cursor-pointer`}
+          <Button
+            onClick={onCancel}
+            variant="cancel"
+            className={`max-w-[150px]`}
           >
             Cancel
-          </button>
+          </Button>
         )}
         {isChanged && (
-          <button
-            onClick={(e) => {
+          <Button
+            onClick={() => {
               setValue(jsonData);
               setIsValid(true);
               setTimeout(() => setIsChanged(false), 200);
             }}
-            className={`px-4 py-2 rounded-md text-black bg-gray-200 cursor-pointer`}
+            className={`max-w-[150px]`}
           >
             Revert
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           onClick={handleSave}
           disabled={!isValid}
-          className={`px-4 py-2 rounded-md text-white cursor-pointer ${
-            isValid
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-blue-300 cursor-not-allowed"
-          }`}
+          className={`max-w-[150px]`}
         >
           Save
-        </button>
+        </Button>
       </div>
     </div>
   );
 }
+
 export default JsonEditor;

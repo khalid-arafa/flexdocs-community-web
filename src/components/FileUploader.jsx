@@ -145,7 +145,7 @@ export default function FileUploader() {
     <>
       {/* Floating uploader panel */}
       {showUploader && (
-        <div className="fixed bottom-4 right-4 z-50 w-80 bg-gray-800 shadow-md rounded-lg overflow-hidden border border-gray-200">
+        <div className="fixed bottom-4 right-4 z-50 w-80 bg-gray-800 shadow-md rounded-lg overflow-hidden border border-gray-200 max-w-[90vw]">
           {/* Header */}
           <div className="bg-gray-800 px-4 py-3 flex justify-between items-center">
             <h3 className="font-medium text-white">File Uploads</h3>

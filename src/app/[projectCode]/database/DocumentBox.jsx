@@ -10,8 +10,10 @@ import { Loader, MoreVerticalIcon, X } from "lucide-react";
 import DropdownButton from "@/components/DropdownButton";
 import { useDialogs } from "@/context/DialogsContext";
 import { useDatabaseContext } from "@/context/DatabaseContext";
+import { useLayoutContext } from "@/context/LayoutContext";
 
 function DocumentBox() {
+  const { sidebarClosed } = useLayoutContext();
   const { activeProject } = useProjectsContext();
 
   const { selectedDocument, selectedCollection, setSelectedDocument } =
@@ -65,11 +67,18 @@ function DocumentBox() {
         toast(body.message, { type: result.ok ? "success" : "error" });
     }
   };
+  
+  const getLayoutClassnames = () => {
+    let classnames = "flex flex-1 bg-white rounded-lg shadow flex flex-col h-[77vh] ";
+    classnames += "w-full md:w-[calc(100vw-280px-8em)] lg:w-[calc(100vw-280px-260px-280px-8em)] xl:max-w-[580px] "
+    if(sidebarClosed) classnames += "lg:w-[100vw-2em)]"
+    return classnames;
+  }
 
   return (
-    <div>
-      <div className="flex-1 bg-white rounded-lg shadow flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+    <div className="flex">
+      <div className={getLayoutClassnames()}>
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between h-[120px]">
           <div>
             <h2 className="text-lg font-semibold mb-1 text-black">
               {selectedDocument ? (
@@ -113,28 +122,30 @@ function DocumentBox() {
             />
           )}
         </div>
-        <div className="flex-1 justify-center items-center md:min-w-130 overflow-y-auto p-4 md:min-h-133 max-h-160">
+        <div className="flex flex-1 overflow-y-auto p-4">
           {isLoading && (
-            <div className="flex justify-center items-center p-8 md:min-w-120">
+            <div className="flex justify-center items-center p-8 w-full">
               <Loader className="w-6 h-6 animate-spin text-gray-800" />
             </div>
           )}
           {!isLoading && !selectedDocument && (
-            <div className="flex justify-center items-center h-64 text-gray-400 text-sm">
+            <div className="flex justify-center items-center h-64 text-gray-400 text-sm w-full">
               <p>Select a document to view details</p>
             </div>
           )}
           {!isLoading && selectedDocument && (
-            <JsonEditor
-              height={"500px"}
-              jsonData={() => {
-                const data = { ...selectedDocument };
-                delete data._id;
-                if (Object.keys(data).length == 0) return "{\n\t\n}";
-                return JSON.stringify(data, null, 2);
-              }}
-              onSave={onSave}
-            />
+            <div className="w-full">
+              <JsonEditor
+                height={"500px"}
+                jsonData={() => {
+                  const data = { ...selectedDocument };
+                  delete data._id;
+                  if (Object.keys(data).length == 0) return "{\n\t\n}";
+                  return JSON.stringify(data, null, 2);
+                }}
+                onSave={onSave}
+              />
+            </div>
           )}
         </div>
       </div>

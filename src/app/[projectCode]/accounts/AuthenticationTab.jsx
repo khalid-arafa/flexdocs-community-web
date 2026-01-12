@@ -19,10 +19,10 @@ import { useProjectsContext } from "@/context/ProjectsContext";
 import { useDialogs } from "@/context/DialogsContext";
 import LoadMorePagination from "@/components/LoadMorePagination";
 import DropdownButton from "@/components/DropdownButton";
-import AddEditAccount from "./AddEditAccount";
+import AddEditAccount from "../../../components/AddEditAccount";
 import { showDialog } from "@/components/CustomDialog";
 import { formatDate } from "@/utils/datetime";
-import SetPasswordModal from "./SetPasswordModal";
+import SetPasswordModal from "../../../components/SetPasswordModal";
 import {
   deleteAccount,
   deletSystemUserById,
@@ -39,7 +39,7 @@ function AuthenticationTab({ forAdmin = false }) {
   ];
   const { activeProject } = useProjectsContext();
   return (
-    <div className="w-full max-w-6xl mx-auto p-4">
+    <div className="w-full max-w-6xl mx-auto p-2 md:p-4">
       <Tabs
         tabs={tabs}
         trailing={
@@ -128,8 +128,8 @@ const Content = ({ forAdmin = false }) => {
             docId: account.uid,
             data: { isActive: false },
           });
-          if (result.ok) return;
           const body = await result.json();
+          if (result.ok) return;
           return toast(body.message);
         },
       });
@@ -143,9 +143,8 @@ const Content = ({ forAdmin = false }) => {
             docId: account.uid,
             data: { isActive: true },
           });
-
-          if (result.ok) return;
           const body = await result.json();
+          if (result.ok) return;
           return toast(body.message);
         },
       });
@@ -175,16 +174,18 @@ const Content = ({ forAdmin = false }) => {
     if (!activeProject) return;
     const room = `${activeProject.code}/_auth`;
     
-    const handleData = async (data) => {
-      if (data.add)
-        setAccounts((prev) =>
-          Array.from(
+    const handleData = async (data) => { 
+      if (data.add) {        
+        setAccounts((prev) => {
+          const updated = Array.from(
             new Map(
-              [...data.add, ...prev]  // New items first
-                .map(doc => [doc.uid, doc]),
+              [...prev, ...data.add]  // New items last, so they overwrite existing
+                .map(doc => [doc.uid, doc])
             ).values()
-          )
-        );
+          );
+          return updated;
+        });
+      }
 
       if (data.delete) {
         setAccounts((prev) =>
@@ -223,59 +224,76 @@ const Content = ({ forAdmin = false }) => {
       )}
       {!loadingAccounts && accounts.length > 0 && (
         <div className="">
-          <table className="min-w-full bg-white">
-            <thead>
-              <tr className="bg-gray-100 text-gray-400 text-left">
-                <th className="py-3 px-4 font-normal text-sm">Name</th>
-                <th className="py-3 px-4 font-normal text-sm">Email</th>
-                <th className="py-3 px-4 font-normal text-sm">UID</th>
-                <th className="py-3 px-4 font-normal text-sm">Created At</th>
-                <th className="py-3 px-4 font-normal text-sm">Options</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-700">
-              {accounts.map((user, index) => (
-                <tr
-                  key={user.uid}
-                  className={`border-b border-gray-200 hover:bg-gray-50`}
-                >
-                  <td className="py-3 px-4 text-gray-700">
-                    <div className="flex flex-row gap-4 font-bold items-center">
-                      <div
-                        className={`h-10 w-10 relative rounded-full ${
-                          user.isActive ? "" : " border-3  border-red-500"
-                        }`}
-                      >
-                        <Image
-                          src={user.avatar || "https://picsum.photos/80"}
-                          alt={`${user.name}'s avatar`}
-                          width={40}
-                          height={40}
-                          className="rounded-full object-cover"
-                        />
-                      </div>
-                      {user.name || "-No Name-"}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-blue-600">{user.email}</td>
-                  <td className="py-3 px-4 text-gray-700">{user.uid}</td>
-                  <td className="py-3 px-4 text-gray-700">
-                    {formatDate(user.createdAt)}
-                  </td>
-                  <td className="py-3 px-4 flex items-center justify-center">
-                    <DropdownButton
-                      button={
-                        <div className="cursor-pointer hover:bg-white p-2 rounded-full transition-all duration-300 ease-in-out">
-                          <MoreVerticalIcon size={18} color="black" />
-                        </div>
-                      }
-                      choices={choices(user)}
+          {/* Header row - desktop only */}
+          <div className="hidden md:flex bg-gray-100 text-gray-400 text-left text-sm font-normal px-4 py-2 items-center gap-4">
+            <div className="flex-1 min-w-0">Name</div>
+            <div className="flex-1 min-w-0">Email</div>
+            <div className="hidden lg:block flex-1 min-w-0">UID</div>
+            <div className="hidden lg:block flex-1 min-w-0">Created At</div>
+            <div className="flex-shrink-0 w-[42px] text-center">Options</div>
+          </div>
+
+          {/* Cards */}
+          {accounts.map((user) => (
+            <div
+              key={user.uid}
+              className="bg-white border-b border-gray-200 hover:bg-gray-50 p-4"
+            >
+              <div className="flex items-center justify-between gap-4">
+                {/* Name */}
+                <div className="flex flex-row gap-4 font-bold items-center min-w-0 flex-1">
+                  <div
+                    className={`h-10 w-10 relative rounded-full flex-shrink-0 ${
+                      user.isActive ? "" : "border-3 border-red-500"
+                    }`}
+                  >
+                    <Image
+                      src={user.avatar || "https://picsum.photos/80"}
+                      alt={`${user.name}'s avatar`}
+                      width={40}
+                      height={40}
+                      className="rounded-full object-cover"
                     />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  <span className="text-gray-700 truncate">{user.name || "-No Name-"}</span>
+                </div>
+
+                {/* Email - hidden on small screens */}
+                <div className="hidden md:block text-blue-600 flex-1 min-w-0 truncate">
+                  {user.email}
+                </div>
+
+                {/* UID - hidden on small screens */}
+                <div className="hidden lg:block text-gray-700 flex-1 min-w-0 truncate">
+                  {user.uid}
+                </div>
+
+                {/* Created At - hidden on small screens */}
+                <div className="hidden lg:block text-gray-700 flex-1 min-w-0">
+                  {formatDate(user.createdAt)}
+                </div>
+
+                {/* Options */}
+                <div className="flex items-center justify-center flex-shrink-0">
+                  <DropdownButton
+                    button={
+                      <div className="cursor-pointer hover:bg-white p-2 rounded-full transition-all duration-300 ease-in-out">
+                        <MoreVerticalIcon size={18} color="black" />
+                      </div>
+                    }
+                    choices={choices(user)}
+                  />
+                </div>
+              </div>
+
+              {/* Mobile-only details */}
+              <div className="md:hidden mt-3 space-y-2 text-sm pl-14">
+                <div className="text-blue-600">{user.email}</div>
+                <div className="text-gray-700">UID: {user.uid}</div>
+                <div className="text-gray-700">{formatDate(user.createdAt)}</div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import React from "react";
-import AuthenticationTab from "@/components/AuthenticationTab";
+import AuthenticationTab from "@/app/[projectCode]/accounts/AuthenticationTab";
 
 function page() {
   return <AuthenticationTab forAdmin={false} />;

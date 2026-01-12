@@ -14,6 +14,7 @@ import { Check, Trash } from "lucide-react";
 import { useDialogs } from "@/context/DialogsContext";
 import { useRouter } from "next/navigation";
 import { disconnectSocket } from "@/utils/socket";
+import Button from '@/components/Button';
 
 function GeneralSettings() {
     const { activeProject, setProjects, setActiveProject } = useProjectsContext();
@@ -82,7 +83,6 @@ function GeneralSettings() {
           msg: "Are you sure you want to delete this project?",
         });
         if (!confirmed) return;
-        console.log(activeProject);
         const result = await deleteProjectByCode(activeProject.code);
         const body = await result.json();
         if (result.ok) {
@@ -160,22 +160,23 @@ function GeneralSettings() {
           />
         </div>
 
-        <div className="flex items-center justify-end space-x-4 pt-4 gap-2">
-          <button
+        <div className="flex flex-col md:flex-row items-center justify-end pt-4 gap-2">
+          <Button
             type="button"
+            variant='cancel'
             onClick={deleteProject}
-            className="inline-flex items-center px-4 py-2 border border-transparent cursor-pointer text-sm font-medium rounded-md shadow-sm text-white bg-red-500 hover:bg-red-600 gap-2"
+            className="flex items-center justify-center gap-2 px-4 py-2 max-w-[200px]"
           >
             <Trash size={22} color="white" />
             Delete Project
-          </button>
-          <button
-            type="Save"
-            className="inline-flex items-center px-4 py-2 border border-transparent cursor-pointer text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-600 gap-2"
+          </Button>
+          <Button
+            type='submit'
+            className="flex items-center justify-center gap-2 px-4 py-2 max-w-[200px]"
           >
             <Check size={22} color="white" />
             Save Project
-          </button>
+          </Button>
         </div>
       </form>
     </div>

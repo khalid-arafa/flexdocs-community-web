@@ -1,13 +1,14 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
-import { Download, Trash2, Key, Loader } from 'lucide-react';
+import { Download, Trash2, Key, Loader, Plus } from 'lucide-react';
 import { useDialogs } from '@/context/DialogsContext';
 import { useProjectsContext } from '@/context/ProjectsContext';
 import { showDialog } from '@/components/CustomDialog';
 import AddEditCreds from './AddEditCreds';
 import { toast } from 'react-toastify';
 import { deleteProjectCreds, getProjectCreds } from '@/utils/api';
+import Button from '@/components/Button';
 
 function ProjectCredentials() {
   const { confirm } = useDialogs();
@@ -78,15 +79,15 @@ function ProjectCredentials() {
 
   return (
     <div className="max-w-4xl py-6 min-h-screen">
-      <div className="mb-8 flex flex-row">
+      <div className="mb-8 flex flex-col md:flex-row items-center gap-4">
         <div className="flex flex-col flex-1">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2 flex items-center gap-3">
+          <h1 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-3">
             <Key className="text-blue-600" size={32} />
             Project Credentials
           </h1>
           <p className="text-slate-600">Manage your API keys and access tokens</p>
         </div>
-        <button
+        <Button
           onClick={() => {
             showDialog({
               content: AddEditCreds,
@@ -97,10 +98,11 @@ function ProjectCredentials() {
               },
             });
           }}
-          className="flex items-center gap-2 px-4 py-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 cursor-pointer"
+          className="flex items-center justify-center gap-2 px-4 py-2 w-[200px]!"
         >
-          Generate Creds
-        </button>
+          <Plus size={22} className="text-white" />
+          <span>Generate Creds</span>
+        </Button>
       </div>
 
       {isLoading && <div className="flex justify-center items-center p-8">
@@ -126,21 +128,22 @@ function ProjectCredentials() {
                   </div>
 
                   <div className="flex gap-3 lg:flex-shrink-0">
-                    <button
+                    <Button
                       onClick={() => handleDownload(cred)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 cursor-pointer"
-                    >
+                      className="flex items-center justify-center gap-2 px-4 py-2"
+                      >
                       <Download size={16} />
                       Download
-                    </button>
+                    </Button>
                     
-                    <button
+                    <Button
                       onClick={() => handleDelete(cred)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 cursor-pointer"
+                      variant='cancel'
+                      className="flex items-center justify-center gap-2 px-4 py-2"
                     >
                       <Trash2 size={16} />
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

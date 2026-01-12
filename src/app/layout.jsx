@@ -1,5 +1,6 @@
 
-import { Geist, Geist_Mono } from "next/font/google";
+// import { Geist, Geist_Mono } from "next/font/google";
+import { Montserrat } from 'next/font/google';
 import { ProjectsContextProvider } from "@/context/ProjectsContext";
 import { ProjectAuthContextProvider } from "@/context/ProjectAuthContext";
 import { StorageContextProvider } from "@/context/StorageContext";
@@ -8,28 +9,23 @@ import { DialogsProvider } from "@/context/DialogsContext";
 
 import "./globals.css";
 import { ToastContainer } from "react-toastify";
+import { LayoutProvider } from '@/context/LayoutContext';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
 });
 
 export const metadata = {
-  title: "Multi Databses Project",
+  title: "FastDb Admin Dashboard",
   description: "Multi Databses Project",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="bg-gray-100">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
+      <body className={`${montserrat.className} antialiased`}>
+        <LayoutProvider>
         <ProjectsContextProvider>
           <ProjectAuthContextProvider>
             <StorageContextProvider>
@@ -40,6 +36,7 @@ export default function RootLayout({ children }) {
           </ProjectAuthContextProvider>
           <ToastContainer />
         </ProjectsContextProvider>
+        </LayoutProvider>
       </body>
     </html>
   );

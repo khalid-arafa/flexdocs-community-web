@@ -10,8 +10,10 @@ import { deleteCollection } from "@/utils/api";
 import { toast } from "react-toastify";
 import { getSocket } from "@/utils/socket";
 import { useDatabaseContext } from "@/context/DatabaseContext";
+import { useLayoutContext } from "@/context/LayoutContext";
 
 function DocumentsBox() {
+  const { sidebarClosed } = useLayoutContext();
   const { activeProject } = useProjectsContext();
 
   const {
@@ -182,14 +184,26 @@ function DocumentsBox() {
     selectedDocumentRef.current = selectedDocument;
   }, [selectedDocument]);
 
+  const getLayoutClassnames = () => {
+    let classnames = "bg-white rounded-lg shadow  flex flex-col h-[77vh] ";
+    classnames += "w-full md:w-[calc((100vw-280px-7em)/2)] xl:w-[280px] "
+    if(sidebarClosed) classnames += "md:w-[calc(50vw-62px-1em)]"
+    return classnames;
+  }
+
   return (
     <div>
-      <div className="md:w-65 bg-white rounded-lg shadow  flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      <div className={getLayoutClassnames()}>
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between h-[120px]">
           <div>
             <h2 className="text-lg font-semibold mb-1 text-black">
               {selectedCollection ? selectedCollection.name : "Documents"}
             </h2>
+            {!selectedCollection && (
+              <p className="text-xs text-gray-400">
+                Select a Collection to view ducuments
+              </p>
+            )}
             {selectedCollection && (
               <p className="text-xs text-gray-400">
                 Select a document to view details
@@ -210,8 +224,8 @@ function DocumentsBox() {
             <div className="flex justify-center items-center h-64 text-gray-400 text-sm">
               <p>Select a collection first</p>
             </div>
-          ) : loadingCollectionDocuments ? (
-            <div className="flex justify-center items-center p-8">
+          ) : loadingCollectionDocuments === true ? (
+            <div className="flex justify-center items-center h-full p-8">
               <Loader className="w-6 h-6 animate-spin text-gray-800" />
             </div>
           ) : collectionDocuments.length === 0 ? (
@@ -245,7 +259,7 @@ function DocumentsBox() {
               ))}
             </ul>
           )}
-          {loadingMoreCollectionDocuments && (
+          {loadingMoreCollectionDocuments === true && (
             <div className="flex justify-center items-center h-5">
               <Loader className="w-6 h-6 animate-spin text-gray-800" />
             </div>
@@ -267,5 +281,7 @@ function DocumentsBox() {
     </div>
   );
 }
+
+
 
 export default DocumentsBox;

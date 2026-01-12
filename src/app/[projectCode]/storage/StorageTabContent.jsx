@@ -26,6 +26,7 @@ import { useStorageContext } from "@/context/StorageContext";
 import { showDialog } from "@/components/CustomDialog";
 import AddEditBucket from "./AddEditBucket";
 import { toast } from "react-toastify";
+import Tooltip from "@/components/Tooltip";
 
 export default function StorageTabContent() {
   const [totalCount, setTotalCount] = useState(0);
@@ -85,11 +86,6 @@ export default function StorageTabContent() {
   };
 
   const getDownloadableLink = ({ file, withToken = false }) => {
-    console.log(activeProject);
-    console.log(withToken);
-    console.log(activeProject.isPublic);
-    
-    
     const url = `${API_URL}/projects/${file.projectCode}/storage/${file._id}/${file.name}.${file.ext}`;
     return withToken || !activeProject.isPublic ? url + `?token=${activeProject.projectToken}` : url;
   };
@@ -98,7 +94,7 @@ export default function StorageTabContent() {
     let choices = [
       {
         label: "Delete",
-        icon: <X size={18} />,
+        icon: <X size={18} color="black" />,
         onClick: async () => {
           const confirmed = await confirm({
             msg: "Are you sure, you want to delete this?",
@@ -122,7 +118,7 @@ export default function StorageTabContent() {
     if (item.type == "file") {
       choices.unshift({
         label: "Copy Downloadable Link",
-        icon: <Copy size={18} />,
+        icon: <Copy size={18} color="black" />,
         onClick: () => {
           navigator.clipboard
             .writeText(getDownloadableLink({ file: item }))
@@ -135,7 +131,7 @@ export default function StorageTabContent() {
     if (item.type == "bucket") {
       choices.unshift({
         label: "Edit",
-        icon: <Edit size={18} />,
+        icon: <Edit size={18} color="black" />,
         onClick: async () => {
           showDialog({
             content: AddEditBucket,
@@ -154,8 +150,6 @@ export default function StorageTabContent() {
   };
 
   const handleItemClick = (item) => {
-    console.log(item);
-    
     if (loading === true || loadingMore === true) return;
 
     if (item.type === "bucket") {
@@ -200,10 +194,9 @@ export default function StorageTabContent() {
   }, [page, getCurrectBucket, activeProject]);
   
   useEffect(() => {
-    setPage(1); // reset page on path change+
+    setPage(1);
     setTotalCount(0);
   }, [bucketPathList]);
-
 
   // Render breadcrumbs
   const renderBreadcrumbs = () => {
@@ -213,7 +206,7 @@ export default function StorageTabContent() {
     ];
 
     return (
-      <div className="flex items-center ">
+      <div className="flex items-center flex-wrap">
         {pathParts.map((part, index) => (
           <div key={index} className="flex items-center">
             {index > 0 && <ChevronRight className="w-4 h-4 text-gray-500" />}
@@ -242,6 +235,10 @@ export default function StorageTabContent() {
     );
   };
 
+  const getItemName = (item) => {
+    return `${item.name}${item.type === "file" ? `.${item.ext}` : ""}`;
+  }
+
   return (
     <div className="flex flex-col">
       {/* Header */}
@@ -260,62 +257,78 @@ export default function StorageTabContent() {
             This folder is empty
           </div>
         ) : (
-          <div className="">
-            <table className="min-w-full bg-white">
-              <thead>
-                <tr className="bg-gray-100 text-gray-400 text-left">
-                  <th className="py-3 px-2 font-normal text-sm"></th>
-                  <th className="py-3 px-2 font-normal text-sm">Name</th>
-                  <th className="py-3 px-2 font-normal text-sm">Size</th>
-                  <th className="py-3 px-2 font-normal text-sm">Created At</th>
-                  <th className="py-3 px-2 font-normal text-sm flex-1">
-                    Options
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-700">
-                {content.map((item, index) => (
-                  <tr
-                    key={index}
-                    className="border-b border-gray-200 hover:bg-gray-50"
-                  >
-                    <td className="py-3 px-2 pl-6 text-sm">{index + 1}</td>
-                    <td className="py-3 px-2">
-                      <div className="flex items-center">
-                        {item.type === "bucket" ? (
-                          <Folder className="w-5 h-5 mr-2 text-blue-500" />
-                        ) : (
-                          <File className="w-5 h-5 mr-2 text-gray-500" />
-                        )}
-                        <button
-                          onClick={() => handleItemClick(item)}
-                          className={`hover:text-blue-600 hover:underline cursor-pointer text-left`}
-                        >
-                          {item.name}
-                          {item.type == "file" && `.${item.ext}`}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-3 px-0 text-md text-center">
-                      {(item.size && formatBytes(item.size)) || ""}
-                    </td>
-                    <td className="py-3 px-2 text-md">
-                      {formatDate(item.createdAt)}
-                    </td>
-                    <td className="py-3 px-2 flex flex-1 justify-center align-center items-center">
-                      <DropdownButton
-                        button={
-                          <div className="cursor-pointer hover:bg-white p-2 rounded-full transition-all duration-300 ease-in-out">
-                            <MoreVerticalIcon size={18} />
-                          </div>
-                        }
-                        choices={getItemMenuChoices(item)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            {/* Header row - desktop only */}
+            <div className="hidden md:flex bg-gray-100 text-gray-400 text-left text-sm font-normal px-4 py-2 items-center gap-4">
+              <div className="w-8"></div>
+              <div className="flex-1 min-w-0">Name</div>
+              <div className="min-w-0 mx-4">Size</div>
+              <div className="min-w-0 mx-4">Created At</div>
+              <div className="flex-shrink-0 w-[42px] text-center">Options</div>
+            </div>
+
+            {/* Cards */}
+            {content.map((item, index) => (
+              <div
+                key={index}
+                className="bg-white border-b border-gray-200 hover:bg-gray-50 p-4"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  {/* Number - desktop only */}
+                  <div className="hidden md:block text-black text-sm w-8 flex-shrink-0">
+                    {index + 1}
+                  </div>
+
+                  {/* Name */}
+                  <div className="flex items-center min-w-0 flex-1">
+                    {item.type === "bucket" ? (
+                      <Folder className="w-5 h-5 mr-2 text-blue-500 flex-shrink-0" />
+                    ) : (
+                      <File className="w-5 h-5 mr-2 text-gray-500 flex-shrink-0" />
+                    )}
+                    <Tooltip text={getItemName(item)} className="min-w-0 flex-1">
+                      <button
+                        onClick={() => handleItemClick(item)}
+                        className="hover:text-blue-600 hover:underline cursor-pointer text-left text-black truncate block w-full"
+                      >
+                        {getItemName(item)}
+                      </button>
+                    </Tooltip>
+                  </div>
+
+                  {/* Size - hidden on small screens */}
+                  <div className="hidden md:block text-blackmin-w-0 text-left text-black lg:px-4">
+                    {(item.size && formatBytes(item.size)) || ""}
+                  </div>
+
+                  {/* Created At - hidden on small screens */}
+                  <div className="hidden md:block text-black md:px-4 min-w-0 lg:px-4">
+                    {formatDate(item.createdAt)}
+                  </div>
+
+                  {/* Options */}
+                  <div className="flex items-center justify-center flex-shrink-0">
+                    <DropdownButton
+                      button={
+                        <div className="cursor-pointer hover:bg-white p-2 rounded-full transition-all duration-300 ease-in-out">
+                          <MoreVerticalIcon size={18} color="black" />
+                        </div>
+                      }
+                      choices={getItemMenuChoices(item)}
+                    />
+                  </div>
+                </div>
+
+                {/* Mobile-only details */}
+                <div className="md:hidden mt-3 space-y-2 text-sm pl-7 text-black">
+                  {item.size && (
+                    <div className="text-black">Size: {formatBytes(item.size)}</div>
+                  )}
+                  <div className="text-black">{formatDate(item.createdAt)}</div>
+                </div>
+              </div>
+            ))}
+
             {loadingMore && (
               <div className="flex justify-center items-center h-5">
                 <Loader className="w-6 h-6 animate-spin text-gray-800" />

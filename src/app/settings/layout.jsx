@@ -6,10 +6,8 @@ import { ToastContainer } from "react-toastify";
 export default function layout({ children }) {
   return (
     <div>
-      <DialogsProvider>
-        <DialogsProvider>{children}</DialogsProvider>
-        <ToastContainer />
-      </DialogsProvider>
+      <DialogsProvider>{children}</DialogsProvider>
+      <ToastContainer />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Button from "@/components/Button";
 import { createStorageBucket, updateStorageBucket } from "@/utils/api";
 import React, { useState } from "react";
 import { toast } from "react-toastify";
@@ -85,22 +86,25 @@ function AddEditBucket({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-4">
-        <button
-          onClick={(e) => onDone()}
-          className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={async () => {
-            await onSubmit();
-            onDone();
-          }}
-          className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer"
-        >
-          Submit
-        </button>
+      <div className="flex w-full justify-end">
+        <div className="flex gap-2 mt-4">
+          <Button
+            variant="cancel"
+            onClick={(e) => onDone()}
+            className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer max-w-[120px]"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              await onSubmit();
+              onDone();
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer max-w-[120px]"
+          >
+            Submit
+          </Button>
+        </div>
       </div>
     </div>
   );

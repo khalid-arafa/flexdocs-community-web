@@ -1,4 +1,5 @@
 "use client";
+import Button from "@/components/Button";
 import React, {
   useState,
   createContext,
@@ -84,19 +85,13 @@ function ConfirmDialog({ title, msg, onClick }) {
       >
         {title && <p className="font-bold text-black text-xl">{title}</p>}
         {msg && <p className="mt-2">{msg}</p>}
-        <div className="flex justify-end gap-4 mt-6">
-          <button
-            className="px-8 py-3 bg-black/10 cursor-pointer rounded-lg hover:scale-110 transition-transform duration-100"
-            onClick={() => handleClick(false)}
-          >
-            No
-          </button>
-          <button
-            className="px-8 py-3 cursor-pointer bg-blue-600 text-white rounded-lg hover:scale-110 transition-transform duration-100"
-            onClick={() => handleClick(true)}
-          >
-            Yes
-          </button>
+        <div className="flex w-[80%]">
+          <div className="flex justify-end gap-4 mt-6">
+            <Button variant="cancel" onClick={() => handleClick(false)}>
+              No
+            </Button>
+            <Button onClick={() => handleClick(true)}>Yes</Button>
+          </div>
         </div>
       </div>
     </div>

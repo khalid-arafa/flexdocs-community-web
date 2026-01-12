@@ -41,9 +41,9 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 p-8 text-center">
-          <h1 className="text-4xl font-bold text-white mb-2">Xellora</h1>
-          <p className="text-indigo-100">Content Creator Dashboard</p>
+        <div className="bg-gradient-to-br from-[#364a79] via-[#0F172A] to-[#364a79] p-8 text-center">
+          <h1 className="text-4xl font-bold text-white mb-2">FastDB</h1>
+          <p className="text-indigo-100">FastDB Dashboard</p>
         </div>
 
         <div className="p-8">
@@ -112,7 +112,7 @@ export default function AuthPage() {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full cursor-pointer bg-gradient-to-r from-[#192542] to-[#213055] text-white py-3 px-4 rounded-xl font-semibold  hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLoading}
             >
               {isLoading ? (

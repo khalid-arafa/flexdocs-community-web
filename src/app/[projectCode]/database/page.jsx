@@ -44,6 +44,8 @@ export default function page() {
           onSave={(newRules) => onSaveRules(newRules)}
           jsonData={rules}
           height="600px"
+          className={"border border-gray-100 rounded-xl"}
+          backgroundColor="#fff"
         />
       ),
     },
@@ -68,7 +70,7 @@ export default function page() {
   }, [activeProject]);
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4">
+    <div className="w-full max-w-6xl mx-auto p-2">
       <Tabs tabs={tabs} />
       <ToastContainer />
     </div>

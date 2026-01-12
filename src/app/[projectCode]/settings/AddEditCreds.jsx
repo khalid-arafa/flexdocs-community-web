@@ -1,5 +1,6 @@
 "use client";
 
+import Button from "@/components/Button";
 import { addProjectCreds } from "@/utils/api";
 import React, { useState } from "react";
 import { toast } from "react-toastify";
@@ -16,6 +17,7 @@ function AddEditCreds({
   const [error, setError] = useState("");
 
   const onCreate = async () => {
+    if(!name) return;  
     try {
       let toastMsg = "Error has happen while contacting the api!";
       const result = await addProjectCreds({
@@ -31,6 +33,7 @@ function AddEditCreds({
         toastMsg = body.message;
       } else {
         onSuccess(body);
+        onDone();
       }
       toast(toastMsg);
     } catch (error) {
@@ -77,22 +80,22 @@ function AddEditCreds({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-4">
-        <button
-          onClick={(e) => onDone()}
-          className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={async () => {
-            await onCreate();
-            onDone();
-          }}
-          className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer"
-        >
-          Create
-        </button>
+      <div className="flex justify-end w-full">
+        <div className="flex justify-end gap-2 mt-4">
+          <Button
+            onClick={(e) => onDone()}
+            variant="cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              await onCreate();
+            }}
+          >
+            Create
+          </Button>
+        </div>
       </div>
     </div>
   );

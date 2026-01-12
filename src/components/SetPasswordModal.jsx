@@ -1,5 +1,6 @@
 import { updateAccountData } from "@/utils/api";
 import React, { useState } from "react";
+import Button from "./Button";
 
 function SetPasswordModal({
   title = "Setting Password",
@@ -29,7 +30,6 @@ function SetPasswordModal({
         docId: accountId,
         data: { password },
       });
-      console.log(result);
       if (result.ok) {
         toast("Account password has been changed successfully!");
       } else {
@@ -70,21 +70,24 @@ function SetPasswordModal({
           )}
         </div>
       </div>
-      <div className="flex justify-end gap-2 mt-4">
-        <button
-          onClick={(e) => onDone()}
-          className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={async () => {
-            await onSubmit();
-          }}
-          className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer"
-        >
-          Submit
-        </button>
+      <div className="flex justify-end w-full">
+        <div className="flex gap-2 mt-4">
+          <Button
+            onClick={(e) => onDone()}
+            variant="cancel"
+            className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer max-w-[150px]"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              await onSubmit();
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer max-w-[150px]"
+          >
+            Submit
+          </Button>
+        </div>
       </div>
     </div>
   );

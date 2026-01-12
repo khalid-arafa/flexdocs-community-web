@@ -1,5 +1,6 @@
 "use client";
 
+import Button from "@/components/Button";
 import { createNewCollection } from "@/utils/api";
 import React, { useState } from "react";
 
@@ -29,11 +30,6 @@ function AddEditCollection({
         }
         toast(body.message);
       }
-      // if (title.toLowerCase().includes("edit"))
-      //   await updateStorageBucket({
-      //     bucketId: bucket._id,
-      //     data: { name, description },
-      //   });
     } catch (error) {
       console.log("Couldn't create collection", error);
     }
@@ -46,10 +42,10 @@ function AddEditCollection({
       <div
         className={`bg-white rounded-3xl text-black transition-all duration-300 ease-in-out max-w-md w-full`}
       >
-        <h2 className="font-bold text-black text-xl mb-4">{title}</h2>
+        <h2 className="font-bold text-black text-2xl mb-4">{title}</h2>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">
+        <div className="">
+          <label className="block text-md font-medium mb-2">
             Collection Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -67,21 +63,23 @@ function AddEditCollection({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-4">
-        <button
+      <div className="flex flex-1 justify-end mt-4 w-full">
+        <div className="flex w-full/2 gap-2">
+          <Button
           onClick={(e) => onDone()}
-          className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer"
+          variant="cancel"
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={async () => {
             await onSubmit();
           }}
-          className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer"
+          className=""
         >
           Submit
-        </button>
+        </Button>
+        </div>
       </div>
     </div>
   );
