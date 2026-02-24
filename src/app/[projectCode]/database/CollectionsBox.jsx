@@ -10,6 +10,13 @@ import AddEditCollection from "./AddEditCollection";
 import { useDatabaseContext } from "@/context/DatabaseContext";
 import { toast } from "react-toastify";
 import { useLayoutContext } from "@/context/LayoutContext";
+import Tooltip from "@/components/Tooltip";
+
+const compactNumberFormatter = new Intl.NumberFormat("en", {
+  notation: "compact",
+  compactDisplay: "short",
+  maximumFractionDigits: 1,
+});
 
 function CollectionsBox() {
   const { sidebarClosed } = useLayoutContext();
@@ -156,7 +163,7 @@ function CollectionsBox() {
                   key={collection.name}
                   className={`px-4 py-3 cursor-pointer hover:bg-gray-50 ${
                     selectedCollection?.name === collection.name
-                      ? "bg-blue-50 border-l-4 border-l-blue-400"
+                      ? "bg-brand/10 border-l-4 border-l-brand"
                       : ""
                   }`}
                   onClick={() => setSelectedCollection(collection)}
@@ -167,7 +174,16 @@ function CollectionsBox() {
                         {collection.name}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {collection.documentsCount} documents
+                        <Tooltip
+                          text={`${(collection.documentsCount || 0).toLocaleString()} documents`}
+                        >
+                          <span>
+                            {compactNumberFormatter.format(
+                              collection.documentsCount || 0
+                            )}{" "}
+                            documents
+                          </span>
+                        </Tooltip>
                       </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-gray-400" />

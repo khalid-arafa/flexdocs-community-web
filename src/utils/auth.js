@@ -42,3 +42,10 @@ export const register = async (name, email, password) => {
 export const logout = () => {
   Cookies.remove("user")
 }
+
+export const logoutAndRedirect = (path = "/login") => {
+  logout();
+  if (typeof window !== "undefined" && window.location.pathname !== path) {
+    window.location.replace(path);
+  }
+}

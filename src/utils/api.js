@@ -1,52 +1,74 @@
 import { API_URL } from "@/constants";
 import Cookies from "js-cookie";
-import { logout } from "./auth";
+import { logout, logoutAndRedirect } from "./auth";
+
+const UNAUTHORIZED_STATUS = new Set([401, 403]);
+
+function parseUserCookie() {
+  const userCookie = Cookies.get("user");
+  if (!userCookie) return null;
+  try {
+    return JSON.parse(userCookie);
+  } catch {
+    logoutAndRedirect();
+    return null;
+  }
+}
 
 function getToken() {
-  let user = Cookies.get("user");
-  if (user) user = JSON.parse(user);
-  return user.token;
+  const user = parseUserCookie();
+  return user?.token || null;
+}
+
+function getAuthHeaders(extraHeaders = {}) {
+  const token = getToken();
+  return {
+    ...extraHeaders,
+    ...(token ? { authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+async function withAuthHandling(result) {
+  if (UNAUTHORIZED_STATUS.has(result.status)) logoutAndRedirect();
+  return result;
 }
 
 async function get(url) {
   const result = await fetch(url, {
     method: "GET",
-    headers: { authorization: `Bearer ${getToken()}` },
+    headers: getAuthHeaders(),
   });
-  return result;
+  return withAuthHandling(result);
 }
 async function del({ url, body }) {
   const result = await fetch(url, {
     method: "DELETE",
-    headers: {
-      authorization: `Bearer ${getToken()}`,
+    headers: getAuthHeaders({
       ...(body && { "Content-Type": "application/json" }),
-    },
+    }),
     body: body ? JSON.stringify(body) : undefined,
   });
-  return result;
+  return withAuthHandling(result);
 }
 async function post({ url, body }) {
   const result = await fetch(url, {
     method: "POST",
-    headers: {
+    headers: getAuthHeaders({
       "Content-Type": "application/json",
-      authorization: `Bearer ${getToken()}`,
-    },
+    }),
     body: JSON.stringify(body),
   });
-  return result;
+  return withAuthHandling(result);
 }
 async function put({ url, body }) {
   const result = await fetch(url, {
     method: "PUT",
-    headers: {
+    headers: getAuthHeaders({
       "Content-Type": "application/json",
-      authorization: `Bearer ${getToken()}`,
-    },
+    }),
     body: JSON.stringify(body),
   });
-  return result;
+  return withAuthHandling(result);
 }
 
 // user data
@@ -150,6 +172,20 @@ export const loadDbRules = async ({ code }) => {
 export const saveDbRules = async ({ code, rules }) => {
   const result = await put({
     url: `${API_URL}/my/projects/${code}/db/rules`,
+    body: rules,
+  });
+  return result;
+};
+
+// auth rules
+export const loadAuthRules = async ({ code }) => {
+  const result = await get(`${API_URL}/my/projects/${code}/auth/rules`);
+  return result;
+};
+
+export const saveAuthRules = async ({ code, rules }) => {
+  const result = await put({
+    url: `${API_URL}/my/projects/${code}/auth/rules`,
     body: rules,
   });
   return result;

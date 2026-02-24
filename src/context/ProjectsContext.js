@@ -21,7 +21,15 @@ export const ProjectsContextProvider = ({ children }) => {
     if (loadingProjects === true) return;
     if (!projects.length) setLoadingProjects(true);
     else setLoadingMoreProjects(true);
-    const user = JSON.parse(Cookies.get("user"));
+    let user = null;
+    const userCookie = Cookies.get("user");
+    if (userCookie) {
+      try {
+        user = JSON.parse(userCookie);
+      } catch {
+        user = null;
+      }
+    }
     const isAdmin =
       user &&
       user.roles &&

@@ -99,8 +99,8 @@ const UserNavigation = ({title, sidebarClosed, toggleSidebar, projectCode}) => {
           <Tooltip text={"Accounts"} className={"w-full"}>
             <button
               onClick={() => onClick("accounts")}
-              className={`flex items-center px-5 py-3 w-full cursor-pointer ${
-                title === "accounts" ? "bg-[#1e293b]" : "hover:bg-[#1e293b]"
+              className={`flex items-center px-5 py-3 w-full cursor-pointer border-l-[3px] ${
+                title === "accounts" ? "bg-[#1e293b] border-l-brand" : "hover:bg-[#1e293b] border-l-transparent"
               }`}
             >
               <Users size={22} color="white" />
@@ -112,8 +112,8 @@ const UserNavigation = ({title, sidebarClosed, toggleSidebar, projectCode}) => {
           <Tooltip text={"Database"} className={"w-full"}>
           <button
             onClick={() => onClick("database")}
-            className={`flex items-center px-5 py-3 w-full cursor-pointer ${
-              title === "database" ? "bg-[#1e293b]" : "hover:bg-[#1e293b]"
+            className={`flex items-center px-5 py-3 w-full cursor-pointer border-l-[3px] ${
+              title === "database" ? "bg-[#1e293b] border-l-brand" : "hover:bg-[#1e293b] border-l-transparent"
             }`}
           >
             <Database size={22} color="white" />
@@ -125,8 +125,8 @@ const UserNavigation = ({title, sidebarClosed, toggleSidebar, projectCode}) => {
           <Tooltip text={"Storage"} className={"w-full"}>
             <button
               onClick={() => onClick("storage")}
-              className={`flex items-center px-5 py-3 w-full cursor-pointer ${
-                title === "storage" ? "bg-[#1e293b]" : "hover:bg-[#1e293b]"
+              className={`flex items-center px-5 py-3 w-full cursor-pointer border-l-[3px] ${
+                title === "storage" ? "bg-[#1e293b] border-l-brand" : "hover:bg-[#1e293b] border-l-transparent"
               }`}
             >
               <Folder size={22} color="white" />
@@ -138,8 +138,8 @@ const UserNavigation = ({title, sidebarClosed, toggleSidebar, projectCode}) => {
           <Tooltip text={"Settings"} className={"w-full"}>
             <button
               onClick={() => onClick("settings")}
-              className={`flex items-center px-5 py-3 w-full cursor-pointer ${
-                title === "settings" ? "bg-[#1e293b]" : "hover:bg-[#1e293b]"
+              className={`flex items-center px-5 py-3 w-full cursor-pointer border-l-[3px] ${
+                title === "settings" ? "bg-[#1e293b] border-l-brand" : "hover:bg-[#1e293b] border-l-transparent"
               }`}
             >
               <Settings size={22} color="white" />

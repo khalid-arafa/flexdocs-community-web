@@ -17,7 +17,7 @@ function UserSidebar({ children }) {
   const { confirm } = useDialogs();
 
   const getClassnames = () => {
-    let classnames = "bg-[#0F172A] fixed bottom-0 top-0 text-white z-10 flex flex-col transition-all duration-300 border-r border-[#1e293b] ";
+    let classnames = "bg-[#0F172A] fixed bottom-0 top-0 text-white z-10 flex flex-col transition-all duration-300 border-r border-[#1e293b] border-t-[3px] border-t-brand ";
     classnames += sidebarClosed ? "-left-[62px] md:left-0 w-[62px]" : "w-[300px]";
     return classnames;
   }
@@ -47,7 +47,7 @@ function UserSidebar({ children }) {
               if(!sidebarClosed && window.innerWidth < 768) toggleSidebar();
             }}
           >
-            <Image src={"/images/logo-white.png"} alt="Logo" className="overflow-auto" width={200} height={70} />
+            <Image src={"/images/flexdocs-logo.png"} alt="Logo" className="overflow-auto" width={200} height={70} />
           </button>
         </div>
         <p className="text-lg leading-relaxed text-center text-[#ddd]">

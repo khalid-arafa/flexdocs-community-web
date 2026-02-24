@@ -34,7 +34,7 @@ export default function Tabs({ tabs = [], trailing }) {
                 className={`px-4 py-3 font-medium text-sm focus:outline-none cursor-pointer transition-colors duration-300 ease-in-out mr-2
                   ${
                     activeTab === index
-                      ? "text-blue-600 font-semibold"
+                      ? "text-brand font-semibold"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 onClick={() => handleTabClick(index)}
@@ -44,7 +44,7 @@ export default function Tabs({ tabs = [], trailing }) {
               {activeTab === index && (
                 <motion.div
                   layoutId="activeTabIndicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 mx-1"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand mx-1"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}

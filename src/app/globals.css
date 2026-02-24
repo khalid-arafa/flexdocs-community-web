@@ -6,6 +6,7 @@
 }
 
 @theme inline {
+  --color-brand: #7c14c9;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -39,7 +40,7 @@ body {
 }
 
 .token.string {
-  color: #3473d8 !important; 
+  color: #7c14c9 !important; 
 }
 
 .token.number {

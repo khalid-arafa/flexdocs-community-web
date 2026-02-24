@@ -90,6 +90,24 @@ export default function StorageTabContent() {
     return withToken || !activeProject.isPublic ? url + `?token=${activeProject.projectToken}` : url;
   };
 
+  const normalizeId = (id) => {
+    if (!id) return "";
+    if (typeof id === "string") return id;
+    if (typeof id === "object") {
+      if (id.$oid) return String(id.$oid);
+      if (typeof id.toString === "function") return id.toString();
+    }
+    return String(id);
+  };
+
+  const isInCurrentBucket = (item, currentBucketId) => {
+    if (!item) return false;
+    if (item.type === "bucket") {
+      return normalizeId(item.parentId) === currentBucketId;
+    }
+    return normalizeId(item.bucketId) === currentBucketId;
+  };
+
   const getItemMenuChoices = (item) => {
     let choices = [
       {
@@ -100,17 +118,32 @@ export default function StorageTabContent() {
             msg: "Are you sure, you want to delete this?",
           });
           if (!confirmed) return;
+          let result;
           if (item.type == "file") {
-            await deleteStorageFile({
+            result = await deleteStorageFile({
               projectCode: activeProject.code,
               fileId: item._id,
             });
           } else {
-            await deleteStorageBucket({
+            result = await deleteStorageBucket({
               projectCode: activeProject.code,
               bucketId: item._id,
             });
           }
+
+          if (!result?.ok) {
+            const body = await result
+              .json()
+              .catch(() => ({ message: "Delete request failed" }));
+            toast(body.message || "Delete request failed");
+            return;
+          }
+
+          // Optimistic update in case socket update is delayed/missed.
+          setContent((prev) =>
+            prev.filter((i) => normalizeId(i._id) !== normalizeId(item._id))
+          );
+          setTotalCount((prev) => Math.max(0, prev - 1));
         },
       },
     ];
@@ -162,17 +195,63 @@ export default function StorageTabContent() {
     }
   };
 
-  const handleData = async (data) => {
-    if (data.action === "add")
+  const handleData = async (payload) => {
+    if (!payload) return;
+    const currentBucketId = normalizeId(getCurrectBucket()?._id);
+
+    if (Array.isArray(payload.add) && payload.add.length) {
+      const incoming = payload.add.filter((item) =>
+        isInCurrentBucket(item, currentBucketId)
+      );
+      if (incoming.length > 0) {
+        setContent((prev) => {
+          const merged = Array.from(
+            new Map(
+              [...incoming, ...prev].map((doc) => [
+                normalizeId(doc._id),
+                { ...doc },
+              ])
+            ).values()
+          );
+          const delta = merged.length - prev.length;
+          if (delta !== 0) {
+            setTotalCount((count) => Math.max(0, count));
+          }
+          return merged;
+        });
+      }
+    }
+
+    if (Array.isArray(payload.update) && payload.update.length) {
       setContent((prev) =>
-        Array.from(
-          new Map(
-            [...prev, data.data].map((doc) => [doc._id, { ...doc }])
-          ).values()
+        prev.map((item) => {
+          const updated = payload.update.find(
+            (u) => normalizeId(u._id) === normalizeId(item._id)
+          );
+          return updated ? { ...item, ...updated } : item;
+        })
+      );
+    }
+
+    if (Array.isArray(payload.delete) && payload.delete.length) {
+      const deletedIds = new Set(
+        payload.delete.map((item) =>
+          normalizeId(typeof item === "string" ? item : item?._id)
         )
       );
-    if (data.action === "delete")
-      setContent((prev) => prev.filter((i) => data.data._id != i._id));
+      setContent((prev) =>
+      {
+        const next = prev.filter(
+          (item) => !deletedIds.has(normalizeId(item._id))
+        );
+        const removed = prev.length - next.length;
+        if (removed > 0) {
+          setTotalCount((count) => Math.max(0, count - removed));
+        }
+        return next;
+      }
+      );
+    }
 
     setLoading(false);
   };
@@ -239,6 +318,9 @@ export default function StorageTabContent() {
     return `${item.name}${item.type === "file" ? `.${item.ext}` : ""}`;
   }
 
+  const safeTotalCount = Math.max(totalCount, content.length);
+  const safeShowingCount = Math.min(content.length, safeTotalCount);
+
   return (
     <div className="flex flex-col">
       {/* Header */}
@@ -282,7 +364,7 @@ export default function StorageTabContent() {
                   {/* Name */}
                   <div className="flex items-center min-w-0 flex-1">
                     {item.type === "bucket" ? (
-                      <Folder className="w-5 h-5 mr-2 text-blue-500 flex-shrink-0" />
+                      <Folder className="w-5 h-5 mr-2 text-brand flex-shrink-0" />
                     ) : (
                       <File className="w-5 h-5 mr-2 text-gray-500 flex-shrink-0" />
                     )}
@@ -336,9 +418,9 @@ export default function StorageTabContent() {
             )}
             {!loadingMore && (
               <LoadMorePagination
-                showing={content.length}
-                totalCount={totalCount}
-                canLoadMore={content.length < totalCount}
+                showing={safeShowingCount}
+                totalCount={safeTotalCount}
+                canLoadMore={content.length < safeTotalCount}
                 loadMore={() => {
                   setPage((prev) => prev + 1);
                 }}

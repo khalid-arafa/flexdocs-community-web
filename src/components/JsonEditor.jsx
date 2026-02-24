@@ -54,7 +54,7 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundCo
 
   return (
     <div className={`flex flex-col w-full items-end`}>
-      <div className={`w-full overflow-hidden border ${className}`}>
+      <div className={`w-full border ${className}`}>
         <CodeEditor
           value={value}
           language="json"
@@ -67,8 +67,7 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundCo
             backgroundColor: backgroundColor,
             accentColor: "red",
             fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-            height: height,
-            overflow: "auto",
+            minHeight: height,
           }}
         />
       </div>

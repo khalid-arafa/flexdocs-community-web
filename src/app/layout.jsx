@@ -17,7 +17,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata = {
-  title: "FastDb Admin Dashboard",
+  title: "FlexDocs Admin Dashboard",
   description: "Multi Databses Project",
 };
 

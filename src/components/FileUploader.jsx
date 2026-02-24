@@ -1,7 +1,7 @@
 "use client";
 
 // components/FileUpload/FileUploader.js
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { X, CheckCircle, AlertCircle, File } from "lucide-react";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import { getSocket } from "@/utils/socket";
@@ -10,6 +10,7 @@ import { useStorageContext } from "@/context/StorageContext";
 export default function FileUploader() {
   const [files, setFiles] = useState([]);
   // const [isDone, setIsDone] = useState(false);
+  const startedUploadsRef = useRef(new Set());
 
   const { activeProject } = useProjectsContext();
 
@@ -18,7 +19,20 @@ export default function FileUploader() {
 
   const uploadFile = useCallback(
     (fileObj) => {
-      setFiles((prev) => [...prev, { file: fileObj.file }]);
+      const uploadKey = `${fileObj.file.name}_${fileObj.file.size}_${fileObj.file.lastModified || 0}`;
+      if (startedUploadsRef.current.has(uploadKey)) return;
+      startedUploadsRef.current.add(uploadKey);
+
+      setFiles((prev) => {
+        const exists = prev.some(
+          (f) =>
+            f.file.name === fileObj.file.name &&
+            f.file.size === fileObj.file.size &&
+            f.file.lastModified === fileObj.file.lastModified
+        );
+        if (exists) return prev;
+        return [...prev, { file: fileObj.file }];
+      });
       
       const updateFileStatus = (updates) => {
         setFiles((prev) =>
@@ -30,84 +44,101 @@ export default function FileUploader() {
         );
       };
 
+      const socket = getSocket(activeProject.projectToken);
+
+      const cleanupListeners = () => {
+        socket.off("upload:ready", handleReady);
+        socket.off("upload:progress", handleProgress);
+        socket.off("upload:complete", handleComplete);
+        socket.off("upload:error", handleError);
+      };
+
+      const chunkSize = 64 * 1024;
+      let offset = 0;
+      let isReady = false;
+
+      const readAndUploadChunk = () => {
+        const reader = new FileReader();
+        const blob = fileObj.file.slice(offset, offset + chunkSize);
+
+        reader.onload = (e) => {
+          if (e.target.error) {
+            updateFileStatus({
+              status: "error",
+              error: "Failed to read file",
+            });
+            cleanupListeners();
+            startedUploadsRef.current.delete(uploadKey);
+            return;
+          }
+
+          socket.emit("upload:chunk", {
+            name: fileObj.file.name,
+            chunk: new Uint8Array(e.target.result),
+          });
+        };
+
+        reader.readAsArrayBuffer(blob);
+      };
+
+      const handleReady = (data) => {
+        if (data?.name !== fileObj.file.name) return;
+        isReady = true;
+        socket.off("upload:ready", handleReady);
+        updateFileStatus({ status: "uploading", progress: 0 });
+        readAndUploadChunk();
+      };
+
+      const handleProgress = (data) => {
+        if (!isReady) return;
+        if (data?.name !== fileObj.file.name || !data?.received) return;
+
+        offset += chunkSize;
+        const progress = Math.min(
+          100,
+          Math.floor((offset / fileObj.file.size) * 100)
+        );
+        updateFileStatus({ progress });
+
+        if (offset < fileObj.file.size) {
+          readAndUploadChunk();
+        } else {
+          socket.emit("upload:done", fileObj.file.name);
+        }
+      };
+
+      const handleComplete = (data) => {
+        if (data?.name !== fileObj.file.name) return;
+        updateFileStatus({
+          status: "complete",
+          progress: 100,
+          url: data.url,
+        });
+        cleanupListeners();
+        startedUploadsRef.current.delete(uploadKey);
+      };
+
+      const handleError = (error) => {
+        const errorName = error?.name;
+        if (errorName && errorName !== fileObj.file.name) return;
+        const errorMessage =
+          typeof error === "string" ? error : error?.message || "Upload failed";
+        updateFileStatus({ status: "error", error: errorMessage });
+        cleanupListeners();
+        startedUploadsRef.current.delete(uploadKey);
+      };
+
+      socket.on("upload:ready", handleReady);
+      socket.on("upload:progress", handleProgress);
+      socket.on("upload:complete", handleComplete);
+      socket.on("upload:error", handleError);
+
       // Start upload process
-      getSocket(activeProject.projectToken).emit("upload:start", {
+      socket.emit("upload:start", {
         name: fileObj.file.name,
         size: fileObj.file.size,
         type: fileObj.file.type,
         bucket: fileObj.bucketId,
-      });
-
-      // Listen for ready event
-      getSocket(activeProject.projectToken).once("upload:ready", () => {
-        updateFileStatus({ status: "uploading", progress: 0 });
-
-        // Read and send the file in chunks
-        const chunkSize = 64 * 1024; // 64KB chunks
-        let offset = 0;
-
-        const readAndUploadChunk = () => {
-          const reader = new FileReader();
-          const blob = fileObj.file.slice(offset, offset + chunkSize);
-
-          reader.onload = (e) => {
-            if (e.target.error) {
-              updateFileStatus({
-                status: "error",
-                error: "Failed to read file",
-              });
-              return;
-            }
-            getSocket(activeProject.projectToken).emit(
-              "upload:chunk",
-              new Uint8Array(e.target.result)
-            );
-          };
-
-          reader.readAsArrayBuffer(blob);
-        };
-
-        // Listen for progress updates
-        getSocket(activeProject.projectToken).on("upload:progress", (data) => {
-          if (data.name === fileObj.file.name && data.received) {
-            offset += chunkSize;
-            const progress = Math.min(
-              100,
-              Math.floor((offset / fileObj.file.size) * 100)
-            );
-            updateFileStatus({ progress });
-
-            if (offset < fileObj.file.size) {
-              readAndUploadChunk();
-            } else {
-              getSocket(activeProject.projectToken).emit("upload:done");
-            }
-          }
-        });
-
-        // Listen for completion
-        getSocket(activeProject.projectToken).once(
-          "upload:complete",
-          (data) => {
-            if (data.name === fileObj.file.name) {
-              updateFileStatus({
-                status: "complete",
-                progress: 100,
-                url: data.url,
-              });
-              getSocket(activeProject.projectToken).off("upload:progress");
-            }
-          }
-        );
-
-        // Listen for errors
-        getSocket(activeProject.projectToken).once("upload:error", (error) => {
-          updateFileStatus({ status: "error", error });
-          getSocket(activeProject.projectToken).off("upload:progress");
-        });
-
-        // Start the first chunk
-        readAndUploadChunk();
       });
     },
     [activeProject]
@@ -116,6 +147,9 @@ export default function FileUploader() {
   function removeFile(name) {
     setFiles((prev) => prev.filter((i) => i.file.name != name));
     setUploadFiles((prev) => prev.filter((i) => i.file.name != name));
+    for (const key of startedUploadsRef.current) {
+      if (key.startsWith(`${name}_`)) startedUploadsRef.current.delete(key);
+    }
   }
 
   useEffect(() => {
@@ -123,7 +157,7 @@ export default function FileUploader() {
       const file = uploadFiles[i];
       uploadFile(file);
     }
-  }, [uploadFiles]);
+  }, [uploadFiles, uploadFile]);
 
   useEffect(() => {
     return () => {
@@ -139,6 +173,7 @@ export default function FileUploader() {
   const cleanUp = async () => {
     setUploadFiles([]);
     setFiles([]);
+    startedUploadsRef.current.clear();
   };
 
   return (

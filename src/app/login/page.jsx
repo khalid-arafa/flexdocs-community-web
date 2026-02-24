@@ -42,8 +42,8 @@ export default function AuthPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="bg-gradient-to-br from-[#364a79] via-[#0F172A] to-[#364a79] p-8 text-center">
-          <h1 className="text-4xl font-bold text-white mb-2">FastDB</h1>
-          <p className="text-indigo-100">FastDB Dashboard</p>
+          <h1 className="text-4xl font-bold text-white mb-2">FlexDocs</h1>
+          <p className="text-indigo-100">FlexDocs Dashboard</p>
         </div>
 
         <div className="p-8">

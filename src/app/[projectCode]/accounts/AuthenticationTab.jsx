@@ -32,10 +32,12 @@ import { toast } from "react-toastify";
 import { getSocket } from "@/utils/socket";
 import { useProjectAuthContext } from "@/context/ProjectAuthContext";
 import { useRouter } from "next/navigation";
+import AuthRulesTab from "./AuthRulesTab";
 
 function AuthenticationTab({ forAdmin = false }) {
   const tabs = [
     { label: "Accounts", content: <Content forAdmin={forAdmin} /> },
+    { label: "Rules", content: <AuthRulesTab /> },
   ];
   const { activeProject } = useProjectsContext();
   return (
@@ -259,7 +261,7 @@ const Content = ({ forAdmin = false }) => {
                 </div>
 
                 {/* Email - hidden on small screens */}
-                <div className="hidden md:block text-blue-600 flex-1 min-w-0 truncate">
+                <div className="hidden md:block text-brand flex-1 min-w-0 truncate">
                   {user.email}
                 </div>
 

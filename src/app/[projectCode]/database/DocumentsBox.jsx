@@ -239,7 +239,7 @@ function DocumentsBox() {
                   key={doc._id}
                   className={`px-4 py-3 cursor-pointer hover:bg-gray-50 ${
                     selectedDocument?._id === doc._id
-                      ? "bg-blue-50 border-l-4 border-l-blue-400"
+                      ? "bg-brand/10 border-l-4 border-l-brand"
                       : ""
                   }`}
                   onClick={() => setSelectedDocument(doc)}
