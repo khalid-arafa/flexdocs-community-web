@@ -33,7 +33,7 @@ function SetPasswordModal({
       if (result.ok) {
         toast("Account password has been changed successfully!");
       } else {
-        const body = result.json();
+        const body = await result.json();
         return toast(body.message);
       }
 
@@ -56,7 +56,7 @@ function SetPasswordModal({
             New Password <span className="text-red-500">*</span>
           </label>
           <input
-            type="text"
+            type="password"
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);

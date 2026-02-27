@@ -1,15 +1,13 @@
 "use client";
 
-// components/FileUpload/FileUploader.js
 import { useState, useEffect, useCallback, useRef } from "react";
-import { X, CheckCircle, AlertCircle, File } from "lucide-react";
+import { X, CheckCircle, AlertCircle, File, Loader } from "lucide-react";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import { getSocket } from "@/utils/socket";
 import { useStorageContext } from "@/context/StorageContext";
 
 export default function FileUploader() {
   const [files, setFiles] = useState([]);
-  // const [isDone, setIsDone] = useState(false);
   const startedUploadsRef = useRef(new Set());
 
   const { activeProject } = useProjectsContext();
@@ -31,20 +29,26 @@ export default function FileUploader() {
             f.file.lastModified === fileObj.file.lastModified
         );
         if (exists) return prev;
-        return [...prev, { file: fileObj.file }];
+        return [...prev, { file: fileObj.file, status: "preparing", progress: 0 }];
       });
-      
+
       const updateFileStatus = (updates) => {
         setFiles((prev) =>
           prev.map((f) =>
             f.file.name === fileObj.file.name
-              ? { file: fileObj.file, ...updates }
+              ? { ...f, ...updates }
               : f
           )
         );
       };
 
-      const socket = getSocket(activeProject.projectToken);
+      const socket = getSocket(activeProject?.projectToken);
+
+      if (!socket) {
+        updateFileStatus({ status: "error", error: "No connection — missing project token" });
+        startedUploadsRef.current.delete(uploadKey);
+        return;
+      }
 
       const cleanupListeners = () => {
         socket.off("upload:ready", handleReady);
@@ -98,7 +102,7 @@ export default function FileUploader() {
           100,
           Math.floor((offset / fileObj.file.size) * 100)
         );
-        updateFileStatus({ progress });
+        updateFileStatus({ status: "uploading", progress });
 
         if (offset < fileObj.file.size) {
           readAndUploadChunk();
@@ -152,6 +156,10 @@ export default function FileUploader() {
     }
   }
 
+  function clearCompleted() {
+    setFiles((prev) => prev.filter((f) => f.status !== "complete"));
+  }
+
   useEffect(() => {
     for (let i = 0; i < uploadFiles.length; i++) {
       const file = uploadFiles[i];
@@ -185,10 +193,10 @@ export default function FileUploader() {
           <div className="bg-gray-800 px-4 py-3 flex justify-between items-center">
             <h3 className="font-medium text-white">File Uploads</h3>
             <div className="flex gap-2">
-              {uploadFiles.some((file) => file.status === "complete") && (
+              {files.some((f) => f.status === "complete") && (
                 <button
                   onClick={clearCompleted}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-sm text-gray-400 hover:text-gray-200 cursor-pointer"
                 >
                   Clear completed
                 </button>
@@ -240,21 +248,26 @@ export default function FileUploader() {
                   {/* Progress bar */}
                   <div className="w-full bg-gray-200 rounded-full h-1.5">
                     <div
-                      className={`h-1.5 rounded-full ${
+                      className={`h-1.5 rounded-full transition-all duration-200 ${
                         fileObj.status === "error"
                           ? "bg-red-500"
                           : fileObj.status === "complete"
                           ? "bg-green-500"
                           : "bg-blue-500"
                       }`}
-                      style={{ width: `${fileObj.progress}%` }}
+                      style={{ width: `${fileObj.progress || 0}%` }}
                     />
                   </div>
 
                   {/* Status */}
                   <div className="flex justify-between items-center mt-1">
                     <span className="text-xs text-gray-500">
-                      {fileObj.status === "preparing" && "Preparing..."}
+                      {fileObj.status === "preparing" && (
+                        <span className="flex items-center gap-1">
+                          <Loader size={12} className="animate-spin" />
+                          Preparing...
+                        </span>
+                      )}
                       {fileObj.status === "uploading" && `${fileObj.progress}%`}
                       {fileObj.status === "complete" && (
                         <span className="flex items-center text-green-600 font-bold mt-1">

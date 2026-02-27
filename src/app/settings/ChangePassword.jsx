@@ -1,5 +1,8 @@
-import { updateAccountData, updateUser } from "@/utils/api";
+"use client";
+
+import { updateUser } from "@/utils/api";
 import React, { useState } from "react";
+import Button from "@/components/Button";
 
 function ChangePasswordModal({ toast, onDone }) {
   const [oldPassword, setOldPassword] = useState("");
@@ -32,25 +35,23 @@ function ChangePasswordModal({ toast, onDone }) {
         setPasswordError("Password is required!");
         isValid = false;
       }
-      if (confirmPassword && confirmPassword != password) {
+      if (confirmPassword && confirmPassword !== password) {
         setPasswordError("Password and confirm don't match!");
         isValid = false;
       }
       if (!isValid) return;
 
       const result = await updateUser({ password, oldPassword });
-      console.log(result);
       if (result.ok) {
         toast("Your password has been changed successfully!");
       } else {
         const body = await result.json();
-        console.log(body);
         return setPasswordError(body.message);
       }
 
       onDone();
-    } catch (error) {
-      console.log("Couldn't change password", error);
+    } catch {
+      setPasswordError("Failed to change password. Please try again.");
     }
   };
 
@@ -118,19 +119,15 @@ function ChangePasswordModal({ toast, onDone }) {
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
-          <button
-            type="button"
+          <Button
             onClick={(e) => onDone()}
-            className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer"
+            variant="cancel"
           >
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer"
-          >
+          </Button>
+          <Button type="submit">
             Submit
-          </button>
+          </Button>
         </div>
       </form>
     </div>

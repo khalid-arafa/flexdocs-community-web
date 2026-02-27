@@ -22,13 +22,12 @@ export default function page() {
       });
       const body = await result.json();      
       if (result.ok) {
-        toast("Rules changs has been saved successfully!");
+        toast("Rules changes have been saved successfully!");
       } else {
         toast(body.message);
       }
     } catch (error) {
-      console.log(error);
-      toast(error.message);
+      toast(error.message || "Failed to save rules");
     }
   };
 
@@ -62,8 +61,8 @@ export default function page() {
         if (result.ok) {
           setRules(JSON.stringify(body, null, 2));
         }
-      } catch (error) {
-        console.log(error);
+      } catch {
+        // rules failed to load
       }
     };
     loadRules();

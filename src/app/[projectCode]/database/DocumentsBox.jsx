@@ -22,12 +22,12 @@ function DocumentsBox() {
     setSelectedDocument,
     loadingCollectionDocuments,
     collectionDocuments,
-    totalCollectionDoumentsCount,
+    totalCollectionDocumentsCount,
     loadingMoreCollectionDocuments,
     documentsPage,
     setDocumentsPage,
     setCollectionDocuments,
-    setTotalCollectionDoumentsCount,
+    setTotalCollectionDocumentsCount,
     setCollections,
     setTotalCollectionsCount,
     setSelectedCollection,
@@ -68,17 +68,17 @@ function DocumentsBox() {
               const body = await result.json();
               if (result.ok) {
                 toast("Collection was deleted successfully!");
-                setCollections(prev => prev.filter(i => i.name != selectedCollection.name))
+                setCollections(prev => prev.filter(i => i.name !== selectedCollection.name))
                 setCollectionDocuments([]);
                 setSelectedCollection(null);
                 setTotalCollectionsCount(prev => prev - 1);
-                setTotalCollectionDoumentsCount(0);
+                setTotalCollectionDocumentsCount(0);
                 setSelectedDocument(null);
                 return;
               }
               toast(body.message);
-            } catch (error) {
-              console.log(error);
+            } catch {
+              toast("Failed to delete collection");
             }
           },
         },
@@ -99,8 +99,8 @@ function DocumentsBox() {
         )
       );
       // change documents total count
-      setTotalCollectionDoumentsCount(
-        totalCollectionDoumentsCount + data.add.length
+      setTotalCollectionDocumentsCount(
+        totalCollectionDocumentsCount + data.add.length
       );
 
       // change documents count in collections list
@@ -122,7 +122,7 @@ function DocumentsBox() {
         data.add.map((i) => i._id).includes(selectedDocumentRef.current._id)
       ) {
         setSelectedDocument(
-          data.add.find((i) => i._id == selectedDocumentRef.current._id)
+          data.add.find((i) => i._id === selectedDocumentRef.current._id)
         );
       }
     }
@@ -146,7 +146,7 @@ function DocumentsBox() {
         data.update.map((i) => i._id).includes(selectedDocumentRef.current._id)
       ) {
         setSelectedDocument(
-          data.update.find((i) => i._id == selectedDocumentRef.current._id)
+          data.update.find((i) => i._id === selectedDocumentRef.current._id)
         );
       }
     }
@@ -154,7 +154,7 @@ function DocumentsBox() {
       setCollectionDocuments((prev) =>
         prev.filter((i) => !data.delete.some((d) => d._id === i._id))
       );
-      setTotalCollectionDoumentsCount(totalCollectionDoumentsCount - 1);
+      setTotalCollectionDocumentsCount(totalCollectionDocumentsCount - 1);
       setCollections((prev) =>
         prev.map((col) =>
           col.name === selectedCollection.name
@@ -201,7 +201,7 @@ function DocumentsBox() {
             </h2>
             {!selectedCollection && (
               <p className="text-xs text-gray-400">
-                Select a Collection to view ducuments
+                Select a Collection to view documents
               </p>
             )}
             {selectedCollection && (
@@ -266,7 +266,7 @@ function DocumentsBox() {
           )}
           {loadingMoreCollectionDocuments === false &&
             selectedCollection &&
-            totalCollectionDoumentsCount > collectionDocuments.length && (
+            totalCollectionDocumentsCount > collectionDocuments.length && (
               <div className="p-3 text-center">
                 <button
                   className="w-30s cursor-pointer px-3 py-1 rounded hover:bg-gray-900 bg-gray-800 text-white"

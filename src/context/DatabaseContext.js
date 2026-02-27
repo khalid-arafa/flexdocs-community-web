@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState } from "react";
 const DatabaseContext = createContext();
 
 export const DatabaseContextProvider = ({ children }) => {
-  // dataabse
+  // database
   // collections
   const [collections, setCollections] = useState([]);
   const [collectionsPage, setCollectionsPage] = useState(1);
@@ -18,7 +18,7 @@ export const DatabaseContextProvider = ({ children }) => {
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [collectionDocuments, setCollectionDocuments] = useState([]);
   const [documentsPage, setDocumentsPage] = useState(1);
-  const [totalCollectionDoumentsCount, setTotalCollectionDoumentsCount] =
+  const [totalCollectionDocumentsCount, setTotalCollectionDocumentsCount] =
     useState(0);
   const [loadingCollectionDocuments, setLoadingCollectionDocuments] =
     useState(false);
@@ -26,6 +26,7 @@ export const DatabaseContextProvider = ({ children }) => {
     useState(false);
 
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [error, setError] = useState(null);
 
   const getCollections = () => {
     if (searchTerm)
@@ -37,24 +38,32 @@ export const DatabaseContextProvider = ({ children }) => {
     if (loadingCollections || !projectCode) return;
     if (!collections.length) setLoadingCollections(true);
     else setLoadingMoreCollections(true);
+    setError(null);
 
-    const result = await getDatabaseCollections({
-      projectCode,
-      page,
-    });
-    const body = await result.json();
-    if (result.ok) {
-      setCollections((prev) =>
-        Array.from(
-          new Map(
-            [...prev, ...body.collections].map((doc) => [doc.name, doc])
-          ).values()
-        )
-      );
-      setTotalCollectionsCount(body.totalCount);
+    try {
+      const result = await getDatabaseCollections({
+        projectCode,
+        page,
+      });
+      const body = await result.json();
+      if (result.ok) {
+        setCollections((prev) =>
+          Array.from(
+            new Map(
+              [...prev, ...body.collections].map((doc) => [doc.name, doc])
+            ).values()
+          )
+        );
+        setTotalCollectionsCount(body.totalCount);
+      } else {
+        setError(body.message || "Failed to load collections");
+      }
+    } catch (err) {
+      setError("Failed to load collections");
+    } finally {
+      setLoadingCollections(false);
+      setLoadingMoreCollections(false);
     }
-    setLoadingCollections(false);
-    setLoadingMoreCollections(false);
   };
 
   const selectCollection = ({ projectCode }) => {
@@ -62,7 +71,7 @@ export const DatabaseContextProvider = ({ children }) => {
     setCollectionDocuments([]);
     setLoadingCollectionDocuments(false);
     setLoadingMoreCollectionDocuments(false);
-    setTotalCollectionDoumentsCount(0);
+    setTotalCollectionDocumentsCount(0);
     setSelectedDocument(null);
     loadCollectionDocuments({ projectCode, page: 1 });
   };
@@ -72,23 +81,31 @@ export const DatabaseContextProvider = ({ children }) => {
     if (loadingCollectionDocuments === true || !selectedCollection) return;
     if (!collectionDocuments.length) setLoadingCollectionDocuments(true);
     else setLoadingMoreCollectionDocuments(true);
+    setError(null);
 
-    const result = await getCollectionDocuments({
-      projectCode,
-      page,
-      collectionName: selectedCollection.name,
-    });
-    const body = await result.json();
-    if (result.ok) {
-      setCollectionDocuments((prev) =>
-        Array.from(
-          new Map([...prev, ...body.docs].map((doc) => [doc._id, doc])).values()
-        )
-      );
-      setTotalCollectionDoumentsCount(body.totalCount);
+    try {
+      const result = await getCollectionDocuments({
+        projectCode,
+        page,
+        collectionName: selectedCollection.name,
+      });
+      const body = await result.json();
+      if (result.ok) {
+        setCollectionDocuments((prev) =>
+          Array.from(
+            new Map([...prev, ...body.docs].map((doc) => [doc._id, doc])).values()
+          )
+        );
+        setTotalCollectionDocumentsCount(body.totalCount);
+      } else {
+        setError(body.message || "Failed to load documents");
+      }
+    } catch (err) {
+      setError("Failed to load documents");
+    } finally {
+      setLoadingCollectionDocuments(false);
+      setLoadingMoreCollectionDocuments(false);
     }
-    setLoadingCollectionDocuments(false);
-    setLoadingMoreCollectionDocuments(false);
   };
 
   return (
@@ -108,11 +125,11 @@ export const DatabaseContextProvider = ({ children }) => {
         setSelectedCollection,
         loadCollectionDocuments,
         collectionDocuments,
-        totalCollectionDoumentsCount,
+        totalCollectionDocumentsCount,
         selectedDocument,
         setSelectedDocument,
         setCollectionDocuments,
-        setTotalCollectionDoumentsCount,
+        setTotalCollectionDocumentsCount,
 
         selectCollection,
         documentsPage,
@@ -120,6 +137,7 @@ export const DatabaseContextProvider = ({ children }) => {
         loadingMoreCollectionDocuments,
         collectionsPage,
         setCollectionsPage,
+        error,
       }}
     >
       {children}

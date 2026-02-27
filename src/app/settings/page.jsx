@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import { showDialog } from "@/components/CustomDialog";
 import ChangePasswordModal from "./ChangePassword";
 import { useDialogs } from "@/context/DialogsContext";
+import Button from "@/components/Button";
 import { logout } from "@/utils/auth";
 import { clearSockets} from "@/utils/socket";
 import AdminSidebarContent from "@/components/AdminSidebar";
@@ -181,22 +182,22 @@ export default function UserSettings() {
             </span>
           </button>
 
-          <div className="flex items-center justify-end space-x-4 pt-4 gap-2">
-            <button
-              type="button"
+          <div className="flex items-center justify-end pt-4 gap-2">
+            <Button
               onClick={handleDelete}
-              className="inline-flex items-center px-4 py-2 border border-transparent cursor-pointer text-sm font-medium rounded-md shadow-sm text-white bg-red-500 hover:bg-red-600 gap-2"
+              variant="cancel"
+              className="flex items-center justify-center gap-2 max-w-[200px]"
             >
               <Trash size={22} color="white" />
               Delete Account
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="inline-flex items-center px-4 py-2 border border-transparent cursor-pointer text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-600 gap-2"
+              className="flex items-center justify-center gap-2 max-w-[200px]"
             >
               <Check size={22} color="white" />
               Save Changes
-            </button>
+            </Button>
           </div>
         </form>
       </div>

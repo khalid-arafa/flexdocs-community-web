@@ -37,7 +37,7 @@ export default function StorageTabContent() {
 
   const { activeProject } = useProjectsContext();
 
-  const { bucketPathList, setBucketPathList, getCurrectBucket } =
+  const { bucketPathList, setBucketPathList, getCurrentBucket } =
     useStorageContext();
 
   const { confirm } = useDialogs();
@@ -119,7 +119,7 @@ export default function StorageTabContent() {
           });
           if (!confirmed) return;
           let result;
-          if (item.type == "file") {
+          if (item.type === "file") {
             result = await deleteStorageFile({
               projectCode: activeProject.code,
               fileId: item._id,
@@ -148,7 +148,7 @@ export default function StorageTabContent() {
       },
     ];
 
-    if (item.type == "file") {
+    if (item.type === "file") {
       choices.unshift({
         label: "Copy Downloadable Link",
         icon: <Copy size={18} color="black" />,
@@ -161,7 +161,7 @@ export default function StorageTabContent() {
       });
     }
 
-    if (item.type == "bucket") {
+    if (item.type === "bucket") {
       choices.unshift({
         label: "Edit",
         icon: <Edit size={18} color="black" />,
@@ -197,7 +197,7 @@ export default function StorageTabContent() {
 
   const handleData = async (payload) => {
     if (!payload) return;
-    const currentBucketId = normalizeId(getCurrectBucket()?._id);
+    const currentBucketId = normalizeId(getCurrentBucket()?._id);
 
     if (Array.isArray(payload.add) && payload.add.length) {
       const incoming = payload.add.filter((item) =>
@@ -269,8 +269,8 @@ export default function StorageTabContent() {
   }, [activeProject]);
 
   useEffect(() => {
-    fetchContents(getCurrectBucket());
-  }, [page, getCurrectBucket, activeProject]);
+    fetchContents(getCurrentBucket());
+  }, [page, getCurrentBucket, activeProject]);
   
   useEffect(() => {
     setPage(1);
@@ -291,16 +291,16 @@ export default function StorageTabContent() {
             {index > 0 && <ChevronRight className="w-4 h-4 text-gray-500" />}
             <button
               onClick={() => {
-                const currentBucket = getCurrectBucket();
+                const currentBucket = getCurrentBucket();
                 const thisBucket = bucketPathList[index - 1];
                 if (
                   currentBucket &&
                   thisBucket &&
-                  currentBucket._id == thisBucket._id
+                  currentBucket._id === thisBucket._id
                 )
                   return;
                 setContent([]);
-                setBucketPathList((prev) => prev.splice(0, index));
+                setBucketPathList((prev) => prev.slice(0, index));
               }}
               className={`hover:underline px-2 cursor-pointer ${
                 index === pathParts.length - 1 ? "font-medium" : ""

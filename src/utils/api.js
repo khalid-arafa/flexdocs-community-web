@@ -74,7 +74,7 @@ async function put({ url, body }) {
 // user data
 export const getUserData = async () => {
   const result = await get(`${API_URL}/me`);
-  if (result.status == 404) logout();
+  if (result.status === 404) logout();
   return result;
 };
 
@@ -90,12 +90,12 @@ export const deleteUser = async () => {
 
 // admin
 export const getSystemUserById = async (id) => {
-  const result = await get(`${API_URL}/admin/accounts/${id}`);
+  const result = await get(`${API_URL}/admin/accounts/${encodeURIComponent(id)}`);
   return result;
 };
 export const deletSystemUserById = async (id) => {
   const result = await del({
-    url: `${API_URL}/admin/accounts/${id}`,
+    url: `${API_URL}/admin/accounts/${encodeURIComponent(id)}`,
   });
   return result;
 };
@@ -122,56 +122,56 @@ export const getUserProjects = async () => {
 };
 
 export const getProjectByCode = async ({ code }) => {
-  const result = await get(`${API_URL}/my/projects/${code}`);
+  const result = await get(`${API_URL}/my/projects/${encodeURIComponent(code)}`);
   return result;
 };
 
 export const deleteProjectByCode = async (code) => {
-  const result = await del({ url: `${API_URL}/my/projects/${code}` });
+  const result = await del({ url: `${API_URL}/my/projects/${encodeURIComponent(code)}` });
   return result;
 };
 
 export const updateProjectByCode = async ({ code, data }) => {
   const result = await put({
-    url: `${API_URL}/my/projects/${code}`,
+    url: `${API_URL}/my/projects/${encodeURIComponent(code)}`,
     body: data,
   });
   return result;
 };
 
 export const checkCodeValidity = async ({ code }) => {
-  const result = await get(`${API_URL}/my/projects/check-code/${code}`);
+  const result = await get(`${API_URL}/my/projects/check-code/${encodeURIComponent(code)}`);
   return result;
 };
 
 // creds
 export const getProjectCreds = async ({ code }) => {
-  const result = await get(`${API_URL}/my/projects/${code}/creds`);
+  const result = await get(`${API_URL}/my/projects/${encodeURIComponent(code)}/creds`);
   return result;
 };
 export const addProjectCreds = async ({ code, data }) => {
   const result = await post({
-    url: `${API_URL}/my/projects/${code}/creds`,
+    url: `${API_URL}/my/projects/${encodeURIComponent(code)}/creds`,
     body: data,
   });
   return result;
 };
 export const deleteProjectCreds = async ({ code, id }) => {
   const result = await del({
-    url: `${API_URL}/my/projects/${code}/creds/${id}`,
+    url: `${API_URL}/my/projects/${encodeURIComponent(code)}/creds/${encodeURIComponent(id)}`,
   });
   return result;
 };
 
 // rules
 export const loadDbRules = async ({ code }) => {
-  const result = await get(`${API_URL}/my/projects/${code}/db/rules`);
+  const result = await get(`${API_URL}/my/projects/${encodeURIComponent(code)}/db/rules`);
   return result;
 };
 
 export const saveDbRules = async ({ code, rules }) => {
   const result = await put({
-    url: `${API_URL}/my/projects/${code}/db/rules`,
+    url: `${API_URL}/my/projects/${encodeURIComponent(code)}/db/rules`,
     body: rules,
   });
   return result;
@@ -179,13 +179,13 @@ export const saveDbRules = async ({ code, rules }) => {
 
 // auth rules
 export const loadAuthRules = async ({ code }) => {
-  const result = await get(`${API_URL}/my/projects/${code}/auth/rules`);
+  const result = await get(`${API_URL}/my/projects/${encodeURIComponent(code)}/auth/rules`);
   return result;
 };
 
 export const saveAuthRules = async ({ code, rules }) => {
   const result = await put({
-    url: `${API_URL}/my/projects/${code}/auth/rules`,
+    url: `${API_URL}/my/projects/${encodeURIComponent(code)}/auth/rules`,
     body: rules,
   });
   return result;
@@ -194,34 +194,34 @@ export const saveAuthRules = async ({ code, rules }) => {
 // auth
 export const getAuthAccounts = async ({
   projectCode,
-  where = {},
+  query = {},
   page = 1,
   limit = 40,
 }) => {
   const result = await post({
-    url: `${API_URL}/projects/${projectCode}/auth/accounts`,
-    body: { where, page, limit },
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/auth/accounts`,
+    body: { query, page, limit },
   });
   return result;
 };
 
 export const addAccountUser = async ({ projectCode, data }) => {
   const result = await post({
-    url: `${API_URL}/projects/${projectCode}/auth/accounts/add`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/auth/accounts/add`,
     body: data,
   });
   return result;
 };
 export const updateAccountData = async ({ projectCode, docId, data }) => {
   const result = await put({
-    url: `${API_URL}/projects/${projectCode}/auth/accounts/${docId}`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/auth/accounts/${encodeURIComponent(docId)}`,
     body: data,
   });
   return result;
 };
 export const deleteAccount = async ({ projectCode, docId }) => {
   const result = await del({
-    url: `${API_URL}/projects/${projectCode}/auth/accounts/${docId}`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/auth/accounts/${encodeURIComponent(docId)}`,
   });
   return result;
 };
@@ -235,7 +235,7 @@ export const createStorageBucket = async ({
   parentId,
 }) => {
   const result = await post({
-    url: `${API_URL}/projects/${projectCode}/storage/buckets`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/storage/buckets`,
     body: { name, description, parentId },
   });
   return result;
@@ -246,21 +246,21 @@ export const getBucketContent = async ({
   ipp = 20,
   page = 1,
 }) => {
-  const queryParams = `ipp=${ipp}&page=${page}`;
+  const queryParams = new URLSearchParams({ ipp, page }).toString();
   const result = await get(
-    `${API_URL}/projects/${projectCode}/storage/buckets/${bucketId}/content?${queryParams}`
+    `${API_URL}/projects/${encodeURIComponent(projectCode)}/storage/buckets/${encodeURIComponent(bucketId)}/content?${queryParams}`
   );
   return result;
 };
 export const deleteStorageBucket = async ({ projectCode, bucketId }) => {
   const result = await del({
-    url: `${API_URL}/projects/${projectCode}/storage/buckets/${bucketId.toString()}`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/storage/buckets/${encodeURIComponent(bucketId)}`,
   });
   return result;
 };
 export const updateStorageBucket = async ({ projectCode, bucketId, data }) => {
   const result = await put({
-    url: `${API_URL}/projects/${projectCode}/storage/buckets/${bucketId.toString()}`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/storage/buckets/${encodeURIComponent(bucketId)}`,
     body: data,
   });
   return result;
@@ -269,7 +269,7 @@ export const updateStorageBucket = async ({ projectCode, bucketId, data }) => {
 // files
 export const deleteStorageFile = async ({ projectCode, fileId }) => {
   const result = await del({
-    url: `${API_URL}/projects/${projectCode}/storage/files/${fileId.toString()}`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/storage/files/${encodeURIComponent(fileId)}`,
   });
   return result;
 };
@@ -284,7 +284,7 @@ export const getDatabaseCollections = async ({
   limit = 40,
 }) => {
   const result = await post({
-    url: `${API_URL}/projects/${projectCode}/db/collections`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/collections`,
     body: { where, page, limit },
   });
   return result;
@@ -296,21 +296,21 @@ export const getCollectionDocuments = async ({
   limit = 40,
 }) => {
   const result = await post({
-    url: `${API_URL}/projects/${projectCode}/db/${collectionName}`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/${encodeURIComponent(collectionName)}`,
     body: { page, sort: { createdAt: -1 }, limit },
   });
   return result;
 };
 export const createNewCollection = async ({ projectCode, collectionName }) => {
   const result = await post({
-    url: `${API_URL}/projects/${projectCode}/db/collections/new`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/collections/new`,
     body: { name: collectionName },
   });
   return result;
 };
 export const deleteCollection = async ({ projectCode, collectionName }) => {
   const result = await del({
-    url: `${API_URL}/projects/${projectCode}/db/${collectionName}`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/${encodeURIComponent(collectionName)}`,
     data: { filter: {} },
   });
   return result;
@@ -322,14 +322,14 @@ export const getDocumentById = async ({
   docId,
 }) => {
   const result = await get(
-    `${API_URL}/projects/${projectCode}/db/${collectionName}/${docId}`
+    `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/${encodeURIComponent(collectionName)}/${encodeURIComponent(docId)}`
   );
   return result;
 };
 
 export const createDocument = async ({ projectCode, collectionName, data }) => {
   const result = await post({
-    url: `${API_URL}/projects/${projectCode}/db/${collectionName}/add`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/${encodeURIComponent(collectionName)}/add`,
     body: data,
   });
   return result;
@@ -342,7 +342,7 @@ export const saveDocument = async ({
   data,
 }) => {
   const result = await put({
-    url: `${API_URL}/projects/${projectCode}/db/${collectionName}/${docId.toString()}`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/${encodeURIComponent(collectionName)}/${encodeURIComponent(docId)}`,
     body: { type: "replace", data },
   });
   return result;
@@ -354,7 +354,7 @@ export const deleteDocument = async ({
   docId,
 }) => {
   const result = await del({
-    url: `${API_URL}/projects/${projectCode}/db/${collectionName}/${docId.toString()}`,
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/${encodeURIComponent(collectionName)}/${encodeURIComponent(docId)}`,
   });
   return result;
 };

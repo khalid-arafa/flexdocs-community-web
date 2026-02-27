@@ -2,8 +2,7 @@
 
 import {
   addAccountUser,
-  createStorageBucket,
-  updateStorageBucket,
+  updateAccountData,
 } from "@/utils/api";
 import { isValidEmail, isValidPhone } from "@/utils/validations";
 import React, { useState } from "react";
@@ -64,15 +63,23 @@ function AddEditAccount({
         if (result.ok) {
           toast("Account has been added successfully!");
         } else {
-          const body = result.json();
+          const body = await result.json();
           return toast(body.message);
         }
       }
-      if (title.toLowerCase().includes("edit"))
-        await updateStorageBucket({
-          bucketId: bucket._id,
-          data: { name, description },
+      if (title.toLowerCase().includes("edit")) {
+        const result = await updateAccountData({
+          projectCode: activeProject.code,
+          docId: user._id,
+          data: { name, email, phone, avatar },
         });
+        if (result.ok) {
+          toast("Account has been updated successfully!");
+        } else {
+          const body = await result.json();
+          return toast(body.message);
+        }
+      }
       onDone();
     } catch (error) {
       console.log("Couldn't create account", error);

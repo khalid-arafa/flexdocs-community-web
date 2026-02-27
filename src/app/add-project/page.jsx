@@ -1,25 +1,26 @@
 "use client";
 import { motion } from "framer-motion";
 
-// pages/new-project.js
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { checkCodeValidity, createProject } from "@/utils/api";
 import { Check, Loader, X } from "lucide-react";
 import { useProjectsContext } from "@/context/ProjectsContext";
-import UserSidebar from "@/components/UserSidebar";
 import { useLayoutContext } from "@/context/LayoutContext";
 import AdminSidebarContent from "@/components/AdminSidebar";
+import Button from "@/components/Button";
+import Switch from "@/components/Switch";
 
 export default function NewProject() {
   const router = useRouter();
   const { loadProjects } = useProjectsContext();
-  const {sidebarClosed} = useLayoutContext();
+  const { sidebarClosed } = useLayoutContext();
 
   const [error, setError] = useState("");
   const [codeError, setCodeError] = useState("");
   const [checkingCode, setCheckingCode] = useState(false);
   const [validCode, setValidCode] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -49,8 +50,8 @@ export default function NewProject() {
       const result = await checkCodeValidity({ code });
       const body = await result.json();
       if (result.ok && body.success) setValidCode(true);
-    } catch (error) {
-      console.log(error);
+    } catch {
+      setCodeError("Failed to check code availability");
     }
     setCheckingCode(false);
   };
@@ -73,8 +74,8 @@ export default function NewProject() {
       return setCodeError("Please make sure you enter a valid project code.");
     }
 
+    setSubmitting(true);
     try {
-      // Replace with actual API endpoint
       const response = await createProject({
         name: formData.name,
         code: formData.code,
@@ -88,9 +89,10 @@ export default function NewProject() {
       } else {
         setError(body.message);
       }
-    } catch (error) {
-      console.error("Error creating project:", error);
+    } catch {
+      setError("Failed to create project. Please try again.");
     }
+    setSubmitting(false);
   };
 
   const handleCancel = () => {
@@ -99,166 +101,142 @@ export default function NewProject() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-100 to-blue-50">
-      <div className="max-w-8xl mx-auto flex flex-col lg:flex-row w-full">
-        {/* left */}
+      <div className="flex w-full">
         <AdminSidebarContent />
 
-        <div className={`min-h-screen bg-gray-100 flex flex-col justify-center transition-all duration-400 ease-in-out w-full max-w-[1024px] ${!sidebarClosed ? "ml-[300px]" : "ml-16"}`}>
+        <div
+          className={`flex-1 min-h-screen bg-gray-100 flex flex-col justify-center items-center transition-all duration-400 ease-in-out ${
+            !sidebarClosed ? "lg:ml-[300px]" : "lg:ml-16"
+          }`}
+        >
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, ease: "easeInOut", delay: 0.2 }}
-            className="p-6 w-full"
+            className="w-full max-w-2xl px-4 sm:px-6 py-8"
           >
-            <div className="px-4 sm:px-6 lg:px-8 py-8">
-              <div className="flex flex-col justify-between mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Create New Project
-                </h1>
-                {error && (
-                  <span className="block text-red-600 text-md center">
-                    {error}
+            <div className="flex flex-col justify-between mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Create New Project
+              </h1>
+              {error && (
+                <span className="block mt-2 text-red-600 text-md">
+                  {error}
+                </span>
+              )}
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  required
+                  value={formData.name}
+                  placeholder="Enter project name"
+                  onChange={handleChange}
+                  className="mt-2 text-md bg-white px-4 py-3 text-black block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="code"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Project Code
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    id="code"
+                    name="code"
+                    required
+                    value={formData.code}
+                    placeholder="Examples: project-db, books123, chatsapp"
+                    onChange={handleChange}
+                    className="mt-2 bg-white text-md px-4 py-3 text-black block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  {formData.code && (
+                    <div className="mt-2 flex-shrink-0">
+                      {checkingCode ? (
+                        <Loader className="w-5 h-5 animate-spin text-gray-800" />
+                      ) : validCode ? (
+                        <Check className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <X className="w-5 h-5 text-red-500" />
+                      )}
+                    </div>
+                  )}
+                </div>
+                {codeError && (
+                  <span className="block mt-2 text-red-600 text-sm">
+                    {codeError}
                   </span>
                 )}
               </div>
 
-              <div className="rounded-lg p-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label
-                      htmlFor="name"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Project Name
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      required
-                      value={formData.name}
-                      placeholder="Enter project name"
-                      onChange={handleChange}
-                      className="mt-2 text-md bg-white px-4 py-3 text-black block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="flex flex-row">
-                    <div className="flex flex-1 flex-col">
-                      <label
-                        htmlFor="code"
-                        className="block text-sm font-medium text-gray-700"
-                      >
-                        Project Code
-                      </label>
-                      <div className="flex flex-row gap-4 items-end">
-                        <input
-                          type="text"
-                          id="code"
-                          name="code"
-                          required
-                          value={formData.code}
-                          placeholder="Examples: project-db, books123, chatsapp"
-                          onChange={handleChange}
-                          className="mt-2 bg-white text-md px-4 py-3 text-black block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        />
-                        {validCode && formData.code && (
-                          <div className="my-3 mx-3">
-                            <div className="flex justify-center items-center h-5">
-                              <Check className="w-6 h-6 text-green-500" />
-                            </div>
-                          </div>
-                        )}
-                        {!checkingCode && !validCode && formData.code && (
-                          <div className="my-3 mx-3">
-                            <div className="flex justify-center items-center h-5">
-                              <X className="w-6 h-6 text-red-500" />
-                            </div>
-                          </div>
-                        )}
-                        {checkingCode && formData.code && (
-                          <div className="my-3 mx-3">
-                            <div className="flex justify-center items-center h-5">
-                              <Loader className="w-6 h-6 animate-spin text-gray-800" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      {codeError && (
-                        <span className="block mt-2 text-red-600 text-md center">
-                          {codeError}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="description"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Description
-                    </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      rows="4"
-                      value={formData.description}
-                      onChange={handleChange}
-                      placeholder="Enter project description"
-                      className="mt-2 text-md bg-white px-4 py-3 text-black block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    ></textarea>
-                  </div>
-
-                  <div className="flex flex-row-reverse align-center items-center justify-end gap-2">
-                    <label
-                      htmlFor="isPublic"
-                      className="block mt-2 text-md font-medium text-gray-700 select-none cursor-pointer"
-                    >
-                      Is Public
-                    </label>
-                    <input
-                      type="checkbox"
-                      id="isPublic"
-                      name="isPublic"
-                      checked={formData.isPublic}
-                      onChange={handleChange}
-                      className="mt-2 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end space-x-4 pt-4">
-                    <button
-                      type="button"
-                      onClick={handleCancel}
-                      className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-600"
-                    >
-                      <svg
-                        className="w-5 h-5 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M5 13l4 4L19 7"
-                        ></path>
-                      </svg>
-                      Save Project
-                    </button>
-                  </div>
-                </form>
+              <div>
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  rows="4"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder="Enter project description"
+                  className="mt-2 text-md bg-white px-4 py-3 text-black block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
               </div>
-            </div>
+
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={formData.isPublic}
+                  onChange={(val) =>
+                    setFormData({ ...formData, isPublic: val })
+                  }
+                />
+                <label
+                  className="text-sm font-medium text-gray-700 select-none cursor-pointer"
+                  onClick={() =>
+                    setFormData({ ...formData, isPublic: !formData.isPublic })
+                  }
+                >
+                  Public Project
+                </label>
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4">
+                <Button
+                  variant="secondary"
+                  onClick={handleCancel}
+                  className="!w-full sm:!w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={submitting}
+                  onClick={() => {}}
+                  className="!w-full sm:!w-auto"
+                >
+                  Save Project
+                </Button>
+              </div>
+            </form>
           </motion.div>
         </div>
       </div>

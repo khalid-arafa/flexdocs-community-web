@@ -1,6 +1,17 @@
 import { API_URL } from '@/constants';
 import Cookies from 'js-cookie';
 
+function getCookieOptions() {
+  const isSecure = typeof window !== "undefined"
+    ? window.location.protocol === "https:"
+    : process.env.NODE_ENV === "production";
+  return {
+    expires: 7,
+    sameSite: "Lax",
+    secure: isSecure,
+  };
+}
+
 export const login = async (email, password) => {
   try {
     const result = await fetch(`${API_URL}/login`, {
@@ -10,7 +21,7 @@ export const login = async (email, password) => {
     });
     if (result.ok) {
       const body = await result.json();
-      Cookies.set("user", JSON.stringify(body), { expires: 7 })
+      Cookies.set("user", JSON.stringify(body), getCookieOptions());
       return {
         ok: true,
         body: body,
@@ -30,7 +41,7 @@ export const register = async (name, email, password) => {
   });
   if (result.ok) {
     const body = await result.json();
-    Cookies.set("user", JSON.stringify(body), { expires: 7 })
+    Cookies.set("user", JSON.stringify(body), getCookieOptions());
     return {
       ok: true,
       body: body,
@@ -40,7 +51,7 @@ export const register = async (name, email, password) => {
 }
 
 export const logout = () => {
-  Cookies.remove("user")
+  Cookies.remove("user", { sameSite: "Lax" });
 }
 
 export const logoutAndRedirect = (path = "/login") => {

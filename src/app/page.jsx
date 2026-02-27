@@ -29,7 +29,7 @@ export default function ProjectsPage() {
   return (
     <LayoutWrapper sidebar={<AdminSidebarContent />}>
       <div className="flex flex-col w-full px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 mt-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Your Projects</h1>
             <p className="text-gray-500 mt-1">

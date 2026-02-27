@@ -36,12 +36,7 @@ function DocumentBox() {
   }, [selectedDocument]);
 
   const onSave = async (data) => {
-    if (!activeProject) {
-      return console.log("activeProject is not set");
-    }
-    if (!selectedCollection) {
-      return console.log("selectedCollection is not set");
-    }
+    if (!activeProject || !selectedCollection) return;
     if (!trigger()) return;
 
     if (typeof selectedDocument._id == "undefined") {

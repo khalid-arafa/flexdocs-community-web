@@ -6,16 +6,26 @@ const LayoutContext = createContext();
 
 export const LayoutProvider = ({ children }) => {
   const [currentPageTab, setCurrentPageTab] = useState("Loading ...");
-  const [sidebarClosed, setSidebarClosed] = useState(false);
+  const [sidebarClosed, setSidebarClosed] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem("sidebarClosed");
-    if (saved !== null) setSidebarClosed(JSON.parse(saved));
+    try {
+      const saved = localStorage.getItem("sidebarClosed");
+      if (saved !== null) {
+        setSidebarClosed(JSON.parse(saved));
+      } else {
+        setSidebarClosed(window.innerWidth < 1024);
+      }
+    } catch {
+      setSidebarClosed(window.innerWidth < 1024);
+    }
   }, []);
 
   const toggleSidebar = () => {
     setSidebarClosed((prev) => {
-      localStorage.setItem("sidebarClosed", JSON.stringify(!prev));
+      try {
+        localStorage.setItem("sidebarClosed", JSON.stringify(!prev));
+      } catch { /* localStorage unavailable */ }
       return !prev;
     });
   };

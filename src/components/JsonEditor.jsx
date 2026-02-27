@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { validateJSON } from "@/utils/json";
 import Button from "./Button";
@@ -22,13 +22,12 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundCo
     if (!isChanged) setIsChanged(true);
   };
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (isValid && onSave) {
       try {
         JSON.parse(value);
         const errors = validateJSON(value);
         if (errors) {
-          console.log(errors);
           setIsValid(false);
           return;
         }
@@ -38,7 +37,7 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundCo
         return;
       }
     }
-  };
+  }, [isValid, onSave, value]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {

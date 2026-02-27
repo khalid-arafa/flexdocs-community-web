@@ -12,11 +12,21 @@ function UserInfoView({ withSettings = true, sidebarClosed }) {
   const {toggleSidebar} = useLayoutContext();
 
   useEffect(() => {
-    let _user = Cookies.get("user");
-    if (_user) setUser(JSON.parse(_user));
+    const raw = Cookies.get("user");
+    if (raw) {
+      try {
+        setUser(JSON.parse(raw));
+      } catch {
+        setUser(null);
+      }
+    }
   }, []);
 
-  if (typeof user == "undefined") return <></>;
+  if (!user) return <></>;
+
+  const avatarSrc = user.avatar && /^https?:\/\//.test(user.avatar)
+    ? user.avatar
+    : "https://picsum.photos/80";
 
   return (
     <div>
@@ -24,7 +34,7 @@ function UserInfoView({ withSettings = true, sidebarClosed }) {
       <div className="flex flex-row p-3 mt-2 mb-2 justify-center items-center">
         <div className="flex flex-row flex-1 max-w-80">
           <img
-            src={user?.avatar || "https://picsum.photos/80"}
+            src={avatarSrc}
             alt="User avatar"
             className="w-10 h-10 rounded-full"
           />

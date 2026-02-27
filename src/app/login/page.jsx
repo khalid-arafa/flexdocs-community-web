@@ -23,8 +23,12 @@ export default function AuthPage() {
       await new Promise((res) => setTimeout(() => res(), 1000));
       const result = await login(email, password);
       if (result.ok) return router.push("/");
-      const body = await result.json();
-      setError(body.message);
+      if (typeof result.json === "function") {
+        const body = await result.json();
+        setError(body.message || "Login failed. Please try again.");
+      } else {
+        setError("Login failed. Please try again.");
+      }
     } catch (error) {
       setError("An error occurred. Please try again.");
     }

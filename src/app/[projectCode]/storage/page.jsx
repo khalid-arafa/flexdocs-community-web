@@ -15,7 +15,7 @@ export default function page() {
   // const [rules, setRules] = useState('{\n  "read": true,\n  "write": false\n}');
   const { activeProject } = useProjectsContext();
 
-  const { setUploadFiles, setShowUploader, getCurrectBucket } =
+  const { setUploadFiles, setShowUploader, getCurrentBucket } =
     useStorageContext();
 
   const tabs = [
@@ -53,7 +53,7 @@ export default function page() {
   const add = async () => {
     let files = await pickFiles();
     if (files.length) {
-      const bucketId = getCurrectBucket()?._id || null;
+      const bucketId = getCurrentBucket()?._id || null;
       files = files.map((i) => new Object({ file: i, bucketId }));
       setUploadFiles(files);
       setShowUploader(true);
@@ -79,7 +79,7 @@ export default function page() {
                   showDialog({
                     content: AddEditBucket,
                     params: {
-                      parentId: getCurrectBucket()?._id || null,
+                      parentId: getCurrentBucket()?._id || null,
                       activeProject,
                       toast,
                     },

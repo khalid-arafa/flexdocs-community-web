@@ -47,8 +47,6 @@ function CollectionsBox() {
   //
 
   const handleData = async (data) => {
-    console.log(data);
-    
     if (data.add)
       setCollections((prev) =>
         Array.from(
@@ -64,7 +62,7 @@ function CollectionsBox() {
       setTotalCollectionsCount(totalCollectionsCount - data.delete.length);
       if (
         selectedCollectionRef.current &&
-        data.delete.map((i) => selectedCollectionRef.current.name == i.name)
+        data.delete.some((i) => selectedCollectionRef.current.name === i.name)
       ) {
         setSelectedCollection(null);
       }

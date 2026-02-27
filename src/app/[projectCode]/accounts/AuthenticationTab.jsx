@@ -114,8 +114,8 @@ const Content = ({ forAdmin = false }) => {
               return toast("Account has been deleted successfully.");
             const body = await result.json();
             return toast(body.message);
-          } catch (error) {
-            console.log(error);
+          } catch {
+            toast("Failed to delete account");
           }
         },
       },
@@ -250,7 +250,7 @@ const Content = ({ forAdmin = false }) => {
                     }`}
                   >
                     <Image
-                      src={user.avatar || "https://picsum.photos/80"}
+                      src={user.avatar && /^https?:\/\//.test(user.avatar) ? user.avatar : "https://picsum.photos/80"}
                       alt={`${user.name}'s avatar`}
                       width={40}
                       height={40}

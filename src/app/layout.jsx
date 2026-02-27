@@ -18,7 +18,7 @@ const montserrat = Montserrat({
 
 export const metadata = {
   title: "FlexDocs Admin Dashboard",
-  description: "Multi Databses Project",
+  description: "Multi Databases Project",
 };
 
 export default function RootLayout({ children }) {

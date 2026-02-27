@@ -7,7 +7,14 @@ export const getSocket = (projectToken) => {
   let socket = sockets[projectToken] || null;
   if (!socket) {
     if (projectToken) {
-      sockets[projectToken] = io(API_URL, { auth: { projectToken } });
+      sockets[projectToken] = io(API_URL, {
+        auth: { projectToken },
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 30000,
+        timeout: 20000,
+      });
       socket = sockets[projectToken];
     }
   } else if (!socket.connected) {

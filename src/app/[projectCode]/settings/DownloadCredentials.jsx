@@ -1,5 +1,6 @@
 import React from 'react'
 import { useProjectsContext } from '@/context/ProjectsContext';
+import Button from '@/components/Button';
 
 function DownloadCredentials() {
   const { activeProject } = useProjectsContext();
@@ -17,15 +18,12 @@ function DownloadCredentials() {
 
   return (
     <div className="flex flex-row">
-      <button
-        type="button"
-        className="px-4 py-2 rounded-md bg-white cursor-pointer"
+      <Button
         onClick={(e) => downloadCreds()}
+        className="max-w-fit"
       >
-        <span className="text-black underline">
-          Download Project Credentials
-        </span>
-      </button>
+        Download Project Credentials
+      </Button>
     </div>
   );
 }

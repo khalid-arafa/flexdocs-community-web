@@ -10,7 +10,7 @@ export const StorageContextProvider = ({ children }) => {
   const [uploadFiles, setUploadFiles] = useState([]);
   const [showUploader, setShowUploader] = useState(false);
   const [bucketPathList, setBucketPathList] = useState([]);
-  const getCurrectBucket = () => {
+  const getCurrentBucket = () => {
     const activeBucket = bucketPathList.length
       ? bucketPathList[bucketPathList.length - 1]
       : null;
@@ -25,7 +25,7 @@ export const StorageContextProvider = ({ children }) => {
       setShowUploader,
       bucketPathList,
       setBucketPathList,
-      getCurrectBucket,
+      getCurrentBucket,
 
     }}>
       {children}

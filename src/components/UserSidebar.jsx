@@ -38,7 +38,7 @@ function UserSidebar({ children }) {
         </button>
       </div>
 
-      {!sidebarClosed && <div className="flex-flex-col mt-12 md:mt-24">
+      {!sidebarClosed && <div className="flex flex-col mt-12 md:mt-24">
         <div className="flex w-[200px] h-[70px] mx-auto mb-8">
           <button 
             className="relative hover:scale-110 transition-all ease-in-out overflow-auto cursor-pointer" 

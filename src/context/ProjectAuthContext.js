@@ -12,26 +12,35 @@ export const ProjectAuthContextProvider = ({ children }) => {
   const [accountsTotalCount, setAccountsTotalCount] = useState(0);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [loadingMoreAccounts, setLoadingMoreAccounts] = useState(false);
+  const [error, setError] = useState(null);
 
   const loadAccounts = async ({ projectCode, page }) => {
     if (loadingAccounts) return;
-    if (accounts.length == 0) setLoadingAccounts(true);
+    if (accounts.length === 0) setLoadingAccounts(true);
     else setLoadingMoreAccounts(true);
+    setError(null);
 
-    const result = await getAuthAccounts({ projectCode, page });
-    const body = await result.json();
-    if (result.ok) {
-      setAccounts((prev) =>
-        Array.from(
-          new Map(
-            [...prev, ...body.accounts].map((doc) => [doc._id, doc])
-          ).values()
-        )
-      );
-      setAccountsTotalCount(body.totalCount);
+    try {
+      const result = await getAuthAccounts({ projectCode, page });
+      const body = await result.json();
+      if (result.ok) {
+        setAccounts((prev) =>
+          Array.from(
+            new Map(
+              [...prev, ...body.accounts].map((doc) => [doc._id, doc])
+            ).values()
+          )
+        );
+        setAccountsTotalCount(body.totalCount);
+      } else {
+        setError(body.message || "Failed to load accounts");
+      }
+    } catch (err) {
+      setError("Failed to load accounts");
+    } finally {
+      setLoadingAccounts(false);
+      setLoadingMoreAccounts(false);
     }
-    setLoadingAccounts(false);
-    setLoadingMoreAccounts(false);
   };
 
   const clearAccounts = () => {
@@ -54,6 +63,7 @@ export const ProjectAuthContextProvider = ({ children }) => {
         loadingAccounts,
         loadingMoreAccounts,
         clearAccounts,
+        error,
       }}
     >
       {children}
