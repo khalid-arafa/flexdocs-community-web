@@ -1,12 +1,14 @@
 "use client";
 
-import { ChevronRight, Loader, MoreVerticalIcon, Plus, X } from "lucide-react";
-import React, { useEffect, useRef } from "react";
+import { ChevronRight, Loader, MoreVerticalIcon, Pencil, Plus, X } from "lucide-react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import { formatDate } from "@/utils/datetime";
 import DropdownButton from "@/components/DropdownButton";
 import { useDialogs } from "@/context/DialogsContext";
 import { deleteCollection } from "@/utils/api";
+import { showDialog } from "@/components/CustomDialog";
+import AddEditCollection from "./AddEditCollection";
 import { toast } from "react-toastify";
 import { getSocket } from "@/utils/socket";
 import { useDatabaseContext } from "@/context/DatabaseContext";
@@ -36,6 +38,23 @@ function DocumentsBox() {
   const { confirm } = useDialogs();
 
   const selectedDocumentRef = useRef(selectedDocument);
+  const [flashingItems, setFlashingItems] = useState(new Set());
+  const flashTimeouts = useRef({});
+
+  const flashItems = useCallback((ids) => {
+    setFlashingItems((prev) => new Set([...prev, ...ids]));
+    ids.forEach((id) => {
+      if (flashTimeouts.current[id]) clearTimeout(flashTimeouts.current[id]);
+      flashTimeouts.current[id] = setTimeout(() => {
+        setFlashingItems((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        delete flashTimeouts.current[id];
+      }, 1500);
+    });
+  }, []);
 
   const loadMore = () => {
     setDocumentsPage(documentsPage + 1);
@@ -50,6 +69,31 @@ function DocumentsBox() {
           icon: <Plus size={18} />,
           onClick: async () => {
             setSelectedDocument({});
+          },
+        },
+        {
+          label: "Rename Collection",
+          icon: <Pencil size={18} />,
+          onClick: () => {
+            showDialog({
+              content: AddEditCollection,
+              params: {
+                title: "Rename Collection",
+                collection: selectedCollection,
+                activeProject,
+                toast,
+                onSuccess: ({ oldName, newName }) => {
+                  setCollections((prev) =>
+                    prev.map((col) =>
+                      col.name === oldName ? { ...col, name: newName } : col
+                    )
+                  );
+                  setSelectedCollection((prev) =>
+                    prev && prev.name === oldName ? { ...prev, name: newName } : prev
+                  );
+                },
+              },
+            });
           },
         },
         {
@@ -115,6 +159,8 @@ function DocumentsBox() {
         )
       );
 
+      flashItems(data.add.map((d) => d._id));
+
       // update the selected document if it's selected
       if (
         selectedDocumentRef.current &&
@@ -139,6 +185,9 @@ function DocumentsBox() {
           ).values()
         )
       );
+
+      flashItems(data.update.map((d) => d._id));
+
       // update the selected document if it's selected
       if (
         selectedDocumentRef.current &&
@@ -241,7 +290,7 @@ function DocumentsBox() {
                     selectedDocument?._id === doc._id
                       ? "bg-brand/10 border-l-4 border-l-brand"
                       : ""
-                  }`}
+                  } ${flashingItems.has(doc._id) ? "flash-green" : ""}`}
                   onClick={() => setSelectedDocument(doc)}
                 >
                   <div className="flex justify-between items-center">

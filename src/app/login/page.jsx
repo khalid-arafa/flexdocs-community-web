@@ -1,11 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useRef } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { login } from "@/utils/auth";
 
 export default function AuthPage() {
+  const searchParams = useSearchParams();
+  const sessionExpired = searchParams.get("session") === "expired";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -55,6 +58,12 @@ export default function AuthPage() {
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome back</h2>
             <p className="text-gray-600">Sign in to continue to your dashboard</p>
           </div>
+
+          {sessionExpired && !error && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <span className="text-amber-700 text-sm">Your session has expired. Please log in again.</span>
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">

@@ -1,7 +1,7 @@
 "use client";
 
 import Button from "@/components/Button";
-import { createNewCollection } from "@/utils/api";
+import { createNewCollection, renameCollection } from "@/utils/api";
 import React, { useState } from "react";
 
 function AddEditCollection({
@@ -12,26 +12,42 @@ function AddEditCollection({
   toast,
   activeProject,
 }) {
-  const [name, setName] = useState("");
+  const isRename = title.toLowerCase().includes("rename");
+  const [name, setName] = useState(isRename && collection ? collection.name : "");
   const [error, setError] = useState("");
 
   const onSubmit = async () => {
-    if (!activeProject) return;
+    if (!activeProject || !name.trim()) return;
     try {
-      if (title.toLowerCase().includes("add")) {
+      if (isRename && collection) {
+        if (name.trim() === collection.name) {
+          return onDone();
+        }
+        const result = await renameCollection({
+          projectCode: activeProject.code,
+          collectionName: collection.name,
+          newName: name.trim(),
+        });
+        const body = await result.json();
+        if (result.ok) {
+          onSuccess({ oldName: collection.name, newName: name.trim() });
+          return onDone();
+        }
+        setError(body.message);
+      } else {
         const result = await createNewCollection({
           projectCode: activeProject.code,
           collectionName: name,
         });
-        const body = await result.json(); 
+        const body = await result.json();
         if (result.ok) {
-          onSuccess({name, documentsCount: 0});
+          onSuccess({ name, documentsCount: 0 });
           return onDone();
         }
-        toast(body.message);
+        setError(body.message);
       }
     } catch (error) {
-      console.log("Couldn't create collection", error);
+      console.log("Collection operation failed", error);
     }
   };
 

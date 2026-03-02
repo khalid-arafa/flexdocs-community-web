@@ -110,8 +110,11 @@ const Content = ({ forAdmin = false }) => {
                   docId: account.uid,
                 });
 
-            if (result.ok)
+            if (result.ok) {
+              setAccounts((prev) => prev.filter((a) => a.uid !== account.uid));
+              setAccountsTotalCount((prev) => prev - 1);
               return toast("Account has been deleted successfully.");
+            }
             const body = await result.json();
             return toast(body.message);
           } catch {
@@ -131,7 +134,14 @@ const Content = ({ forAdmin = false }) => {
             data: { isActive: false },
           });
           const body = await result.json();
-          if (result.ok) return;
+          if (result.ok) {
+            setAccounts((prev) =>
+              prev.map((a) =>
+                a.uid === account.uid ? { ...a, isActive: false } : a
+              )
+            );
+            return;
+          }
           return toast(body.message);
         },
       });
@@ -146,7 +156,14 @@ const Content = ({ forAdmin = false }) => {
             data: { isActive: true },
           });
           const body = await result.json();
-          if (result.ok) return;
+          if (result.ok) {
+            setAccounts((prev) =>
+              prev.map((a) =>
+                a.uid === account.uid ? { ...a, isActive: true } : a
+              )
+            );
+            return;
+          }
           return toast(body.message);
         },
       });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { ChevronRight, Database, Loader, Plus, Search, X } from "lucide-react";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import { showDialog } from "@/components/CustomDialog";
@@ -43,11 +43,28 @@ function CollectionsBox() {
   } = useDatabaseContext();
 
   const selectedCollectionRef = useRef(selectedCollection);
+  const [flashingItems, setFlashingItems] = useState(new Set());
+  const flashTimeouts = useRef({});
+
+  const flashItems = useCallback((names) => {
+    setFlashingItems((prev) => new Set([...prev, ...names]));
+    names.forEach((name) => {
+      if (flashTimeouts.current[name]) clearTimeout(flashTimeouts.current[name]);
+      flashTimeouts.current[name] = setTimeout(() => {
+        setFlashingItems((prev) => {
+          const next = new Set(prev);
+          next.delete(name);
+          return next;
+        });
+        delete flashTimeouts.current[name];
+      }, 1500);
+    });
+  }, []);
 
   //
 
   const handleData = async (data) => {
-    if (data.add)
+    if (data.add) {
       setCollections((prev) =>
         Array.from(
           new Map(
@@ -55,6 +72,17 @@ function CollectionsBox() {
           ).values()
         )
       );
+      flashItems(data.add.map((d) => d.name));
+    }
+    if (data.update) {
+      setCollections((prev) =>
+        prev.map((col) => {
+          const updated = data.update.find((u) => u.name === col.name);
+          return updated ? { ...col, ...updated } : col;
+        })
+      );
+      flashItems(data.update.map((d) => d.name));
+    }
     if (data.delete) {
       setCollections((prev) =>
         prev.filter((i) => !data.delete.some((d) => d.name === i.name))
@@ -163,7 +191,7 @@ function CollectionsBox() {
                     selectedCollection?.name === collection.name
                       ? "bg-brand/10 border-l-4 border-l-brand"
                       : ""
-                  }`}
+                  } ${flashingItems.has(collection.name) ? "flash-green" : ""}`}
                   onClick={() => setSelectedCollection(collection)}
                 >
                   <div className="flex justify-between items-center">

@@ -29,7 +29,16 @@ function getAuthHeaders(extraHeaders = {}) {
 }
 
 async function withAuthHandling(result) {
-  if (UNAUTHORIZED_STATUS.has(result.status)) logoutAndRedirect();
+  if (UNAUTHORIZED_STATUS.has(result.status)) {
+    try {
+      const body = await result.clone().json();
+      if (body.expired) {
+        logoutAndRedirect("/login?session=expired");
+        return result;
+      }
+    } catch { /* ignore parse errors */ }
+    logoutAndRedirect();
+  }
   return result;
 }
 
@@ -305,6 +314,13 @@ export const createNewCollection = async ({ projectCode, collectionName }) => {
   const result = await post({
     url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/collections/new`,
     body: { name: collectionName },
+  });
+  return result;
+};
+export const renameCollection = async ({ projectCode, collectionName, newName }) => {
+  const result = await put({
+    url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/collections/${encodeURIComponent(collectionName)}/rename`,
+    body: { newName },
   });
   return result;
 };

@@ -54,3 +54,12 @@ body {
 .token.null {
   color: #5c0e0e !important;
 }
+
+@keyframes flash-green {
+  0% { background-color: rgba(34, 197, 94, 0.25); }
+  100% { background-color: transparent; }
+}
+
+.flash-green {
+  animation: flash-green 1.5s ease-out;
+}
