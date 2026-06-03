@@ -119,7 +119,6 @@ export default function FileUploader() {
           url: data.url,
         });
         cleanupListeners();
-        startedUploadsRef.current.delete(uploadKey);
       };
 
       const handleError = (error) => {
@@ -129,7 +128,6 @@ export default function FileUploader() {
           typeof error === "string" ? error : error?.message || "Upload failed";
         updateFileStatus({ status: "error", error: errorMessage });
         cleanupListeners();
-        startedUploadsRef.current.delete(uploadKey);
       };
 
       socket.on("upload:ready", handleReady);

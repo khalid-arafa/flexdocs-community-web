@@ -13,6 +13,7 @@ import UserSidebar from "@/components/UserSidebar";
 import { Database, Folder, Loader, Settings, Users } from "lucide-react";
 import Tooltip from "@/components/Tooltip";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import LayoutWrapper from "@/components/LayoutWrapper";
 
 export default function layout({ children }) {
@@ -58,7 +59,25 @@ const LayoutContent = ({ children }) => {
   }
 
   if(!isLoading && !activeProject) {
-    return <div className="flex justify-center items-center p-8 h-screen bg-white text-black">404</div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
+        <div className="bg-foreground/5 rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="text-6xl font-bold text-brand mb-4">404</div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            Project Not Found
+          </h2>
+          <p className="text-foreground/50 mb-6">
+            The project you are looking for does not exist or has been removed.
+          </p>
+          <Link
+            href="/"
+            className="inline-block px-6 py-2 bg-brand text-white rounded-lg hover:opacity-90 transition"
+          >
+            Go Home
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -50,9 +50,15 @@ export default function page() {
     });
   }
 
+  const MAX_UPLOAD_FILES = 10;
+
   const add = async () => {
     let files = await pickFiles();
     if (files.length) {
+      if (files.length > MAX_UPLOAD_FILES) {
+        toast.error(`You can upload up to ${MAX_UPLOAD_FILES} files at a time. You selected ${files.length}.`);
+        return;
+      }
       const bucketId = getCurrentBucket()?._id || null;
       files = files.map((i) => new Object({ file: i, bucketId }));
       setUploadFiles(files);
