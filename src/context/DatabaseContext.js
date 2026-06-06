@@ -36,7 +36,8 @@ export const DatabaseContextProvider = ({ children }) => {
 
   const loadCollections = async ({ projectCode, page }) => {
     if (loadingCollections || !projectCode) return;
-    if (!collections.length) setLoadingCollections(true);
+    const isFirstPage = page === 1;
+    if (isFirstPage) setLoadingCollections(true);
     else setLoadingMoreCollections(true);
     setError(null);
 
@@ -47,10 +48,15 @@ export const DatabaseContextProvider = ({ children }) => {
       });
       const body = await result.json();
       if (result.ok) {
+        // Page 1 is a fresh load (e.g. after switching projects) so it must
+        // replace the existing list; later pages append for "Load More".
         setCollections((prev) =>
           Array.from(
             new Map(
-              [...prev, ...body.collections].map((doc) => [doc.name, doc])
+              [...(isFirstPage ? [] : prev), ...body.collections].map((doc) => [
+                doc.name,
+                doc,
+              ])
             ).values()
           )
         );

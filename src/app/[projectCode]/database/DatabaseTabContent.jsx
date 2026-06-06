@@ -9,10 +9,24 @@ import { useDatabaseContext } from "@/context/DatabaseContext";
 
 const DatabseTabContent = () => {
   const { activeProject } = useProjectsContext();
-  const { loadCollections } = useDatabaseContext();
+  const {
+    loadCollections,
+    setSelectedCollection,
+    setCollectionDocuments,
+    setTotalCollectionDocumentsCount,
+    setCollectionsPage,
+    setDocumentsPage,
+  } = useDatabaseContext();
 
   useEffect(() => {
     if (!activeProject?.code) return;
+    // Reset any state carried over from the previously active project before
+    // loading the new project's collections.
+    setSelectedCollection(null);
+    setCollectionDocuments([]);
+    setTotalCollectionDocumentsCount(0);
+    setCollectionsPage(1);
+    setDocumentsPage(1);
     loadCollections({ page: 1, projectCode: activeProject.code });
   }, [activeProject]);
 
