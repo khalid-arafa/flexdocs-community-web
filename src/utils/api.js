@@ -116,6 +116,25 @@ export const getAllProjects = async ({ query, page = 1, ipp = 40 }) => {
   return result;
 };
 
+// email settings (system admin)
+export const getEmailConfig = async () => {
+  const result = await get(`${API_URL}/settings/email`);
+  return result;
+};
+
+export const updateEmailConfig = async (data) => {
+  const result = await put({ url: `${API_URL}/settings/email`, body: data });
+  return result;
+};
+
+export const sendTestEmail = async (to) => {
+  const result = await post({
+    url: `${API_URL}/settings/email/test`,
+    body: to ? { to } : {},
+  });
+  return result;
+};
+
 // projects
 export const createProject = async ({ name, code, description, isPublic }) => {
   const result = await post({

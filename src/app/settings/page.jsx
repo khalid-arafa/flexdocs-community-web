@@ -8,6 +8,7 @@ import { Check } from "lucide-react";
 import { toast } from "react-toastify";
 import { showDialog } from "@/components/CustomDialog";
 import ChangePasswordModal from "./ChangePassword";
+import EmailSettings from "./EmailSettings";
 import Button from "@/components/Button";
 import AdminSidebarContent from "@/components/AdminSidebar";
 import { useLayoutContext } from "@/context/LayoutContext";
@@ -167,6 +168,8 @@ export default function UserSettings() {
             </Button>
           </div>
         </form>
+
+        <EmailSettings />
       </div>
     </div>
   </LayoutWrapper>
