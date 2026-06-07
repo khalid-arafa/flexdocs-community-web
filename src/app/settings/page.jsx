@@ -3,24 +3,18 @@ import { motion } from "framer-motion";
 
 // pages/new-project.js
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { deleteUser, getUserData, updateUser } from "@/utils/api";
-import { Check, Trash } from "lucide-react";
+import { getUserData, updateUser } from "@/utils/api";
+import { Check } from "lucide-react";
 import { toast } from "react-toastify";
 import { showDialog } from "@/components/CustomDialog";
 import ChangePasswordModal from "./ChangePassword";
-import { useDialogs } from "@/context/DialogsContext";
 import Button from "@/components/Button";
-import { logout } from "@/utils/auth";
-import { clearSockets} from "@/utils/socket";
 import AdminSidebarContent from "@/components/AdminSidebar";
 import { useLayoutContext } from "@/context/LayoutContext";
 import LayoutWrapper from "@/components/LayoutWrapper";
 
 export default function UserSettings() {
-  const router = useRouter();
   const {sidebarClosed} = useLayoutContext();
-  const { confirm } = useDialogs();
 
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
@@ -58,25 +52,6 @@ export default function UserSettings() {
       }
     } catch (error) {
       console.error("Error creating project:", error);
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      const confirmed = await confirm({
-        msg: "Are you sure you want to delete this account with all its projects, files and data?",
-      });
-      if (!confirmed) return;
-      const result = await deleteUser();
-      if (result.ok) {
-        clearSockets();
-        logout();
-        return router.replace("/login");
-      }
-      const body = await result.json();
-      toast(body.message);
-    } catch (error) {
-      console.log(error);
     }
   };
 
@@ -183,14 +158,6 @@ export default function UserSettings() {
           </button>
 
           <div className="flex items-center justify-end pt-4 gap-2">
-            <Button
-              onClick={handleDelete}
-              variant="cancel"
-              className="flex items-center justify-center gap-2 max-w-[200px]"
-            >
-              <Trash size={22} color="white" />
-              Delete Account
-            </Button>
             <Button
               type="submit"
               className="flex items-center justify-center gap-2 max-w-[200px]"
