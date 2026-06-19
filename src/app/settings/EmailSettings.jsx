@@ -136,7 +136,7 @@ export default function EmailSettings() {
   const src = SOURCE_LABEL[meta.source] || SOURCE_LABEL.none;
 
   return (
-    <div className="border-t border-gray-200 mt-10 pt-8">
+    <div>
       <div className="flex items-center gap-2 mb-1">
         <Mail size={22} className="text-[#213055]" />
         <h2 className="text-2xl font-bold text-gray-900">Email Configuration</h2>
