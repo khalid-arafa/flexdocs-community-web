@@ -6,7 +6,17 @@ function DownloadCredentials() {
   const { activeProject } = useProjectsContext();
 
   const downloadCreds = () => {
-    const blob = new Blob([JSON.stringify(activeProject, null, 2)], {
+    // Export only the fields a client actually needs — don't dump the entire
+    // project object (which may carry server-managed/internal fields) to disk.
+    const creds = {
+      name: activeProject?.name,
+      code: activeProject?.code,
+      projectId: activeProject?.projectId,
+      projectToken: activeProject?.projectToken,
+      url: activeProject?.url,
+      isPublic: activeProject?.isPublic,
+    };
+    const blob = new Blob([JSON.stringify(creds, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
