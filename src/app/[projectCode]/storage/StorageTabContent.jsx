@@ -346,7 +346,7 @@ export default function StorageTabContent() {
               <div className="flex-1 min-w-0">Name</div>
               <div className="min-w-0 mx-4">Size</div>
               <div className="min-w-0 mx-4">Created At</div>
-              <div className="flex-shrink-0 w-[42px] text-center">Options</div>
+              <div className="shrink-0 w-[42px] text-center">Options</div>
             </div>
 
             {/* Cards */}
@@ -357,16 +357,16 @@ export default function StorageTabContent() {
               >
                 <div className="flex items-center justify-between gap-4">
                   {/* Number - desktop only */}
-                  <div className="hidden md:block text-black text-sm w-8 flex-shrink-0">
+                  <div className="hidden md:block text-black text-sm w-8 shrink-0">
                     {index + 1}
                   </div>
 
                   {/* Name */}
                   <div className="flex items-center min-w-0 flex-1">
                     {item.type === "bucket" ? (
-                      <Folder className="w-5 h-5 mr-2 text-brand flex-shrink-0" />
+                      <Folder className="w-5 h-5 mr-2 text-brand shrink-0" />
                     ) : (
-                      <File className="w-5 h-5 mr-2 text-gray-500 flex-shrink-0" />
+                      <File className="w-5 h-5 mr-2 text-gray-500 shrink-0" />
                     )}
                     <Tooltip text={getItemName(item)} className="min-w-0 flex-1">
                       <button
@@ -389,7 +389,7 @@ export default function StorageTabContent() {
                   </div>
 
                   {/* Options */}
-                  <div className="flex items-center justify-center flex-shrink-0">
+                  <div className="flex items-center justify-center shrink-0">
                     <DropdownButton
                       button={
                         <div className="cursor-pointer hover:bg-white p-2 rounded-full transition-all duration-300 ease-in-out">
