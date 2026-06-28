@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, Suspense } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { login } from "@/utils/auth";
 
-export default function AuthPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const sessionExpired = searchParams.get("session") === "expired";
 
@@ -144,5 +144,15 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// useSearchParams() must be inside a Suspense boundary for the production build
+// (Next.js client-side-rendering bailout requirement).
+export default function AuthPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
