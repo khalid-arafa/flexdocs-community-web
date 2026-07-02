@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { validateJSON } from "@/utils/json";
 import Button from "./Button";
 
 const CodeEditor = dynamic(
@@ -23,21 +22,20 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundCo
   };
 
   const handleSave = useCallback(() => {
-    if (isValid && onSave) {
-      try {
-        JSON.parse(value);
-        const errors = validateJSON(value);
-        if (errors) {
-          setIsValid(false);
-          return;
-        }
-        onSave(value);
-      } catch (error) {
-        setIsValid(false);
-        return;
-      }
+    if (!onSave) return;
+    // JSON.parse is the single source of truth for validity. (It already
+    // rejects trailing commas and unquoted keys, so no extra regex checks are
+    // needed — those produced false "invalid" errors whenever a perfectly valid
+    // string value happened to contain characters like `{ key:` or `, }`.)
+    try {
+      JSON.parse(value);
+    } catch {
+      setIsValid(false);
+      return;
     }
-  }, [isValid, onSave, value]);
+    setIsValid(true);
+    onSave(value);
+  }, [onSave, value]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
