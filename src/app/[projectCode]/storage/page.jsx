@@ -1,7 +1,8 @@
 "use client";
 
-// import JsonEditor from "@/components/JsonEditor";
+import JsonEditor from "@/components/JsonEditor";
 import Tabs from "@/components/Tabs";
+import { useEffect, useState } from "react";
 import { Plus, Upload } from "lucide-react";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import DropdownButton from "@/components/DropdownButton";
@@ -10,32 +11,69 @@ import AddEditBucket from "./AddEditBucket";
 import { toast, ToastContainer } from "react-toastify";
 import StorageTabContent from "./StorageTabContent";
 import { useStorageContext } from "@/context/StorageContext";
+import { loadStorageRules, saveStorageRules } from "@/utils/api";
 
 export default function page() {
-  // const [rules, setRules] = useState('{\n  "read": true,\n  "write": false\n}');
+  const [rules, setRules] = useState();
   const { activeProject } = useProjectsContext();
 
   const { setUploadFiles, setShowUploader, getCurrentBucket } =
     useStorageContext();
+
+  const onSaveRules = async (newRules) => {
+    setRules(newRules);
+    try {
+      const result = await saveStorageRules({
+        code: activeProject.code,
+        rules: JSON.parse(newRules),
+      });
+      const body = await result.json();
+      if (result.ok) {
+        toast("Rules changes have been saved successfully!");
+      } else {
+        toast(body.message);
+      }
+    } catch (error) {
+      toast(error.message || "Failed to save rules");
+    }
+  };
 
   const tabs = [
     {
       label: "Files",
       content: <StorageTabContent />,
     },
-    // {
-    //   label: "Rules",
-    //   content: (
-    //     <JsonEditor
-    //       onSave={(newRules) => {
-    //         setRules(newRules);
-    //       }}
-    //       jsonData={rules}
-    //       height="600px"
-    //     />
-    //   ),
-    // },
+    {
+      label: "Rules",
+      content: (
+        <JsonEditor
+          onSave={(newRules) => onSaveRules(newRules)}
+          jsonData={rules}
+          height="600px"
+          className={"border border-gray-100 rounded-xl"}
+          backgroundColor="#fff"
+        />
+      ),
+    },
   ];
+
+  useEffect(() => {
+    if (!activeProject) return;
+    const loadRules = async () => {
+      try {
+        const result = await loadStorageRules({
+          code: activeProject.code,
+        });
+        const body = await result.json();
+        if (result.ok) {
+          setRules(JSON.stringify(body, null, 2));
+        }
+      } catch {
+        // rules failed to load
+      }
+    };
+    loadRules();
+  }, [activeProject]);
 
   async function pickFiles() {
     return await new Promise((resolve) => {

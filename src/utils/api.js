@@ -205,6 +205,20 @@ export const saveDbRules = async ({ code, rules }) => {
   return result;
 };
 
+// storage rules
+export const loadStorageRules = async ({ code }) => {
+  const result = await get(`${API_URL}/my/projects/${encodeURIComponent(code)}/storage/rules`);
+  return result;
+};
+
+export const saveStorageRules = async ({ code, rules }) => {
+  const result = await put({
+    url: `${API_URL}/my/projects/${encodeURIComponent(code)}/storage/rules`,
+    body: rules,
+  });
+  return result;
+};
+
 // auth rules
 export const loadAuthRules = async ({ code }) => {
   const result = await get(`${API_URL}/my/projects/${encodeURIComponent(code)}/auth/rules`);
