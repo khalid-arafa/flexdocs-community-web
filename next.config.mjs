@@ -34,6 +34,18 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "no-referrer" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Every route here is operator-only — the sign-in screen plus the dashboard,
+  // project database/storage/accounts browsers and settings — so none of it
+  // belongs in a search index. Sent as a header rather than only as a <meta> tag
+  // so it also covers middleware's auth redirects and non-HTML responses, which
+  // never render the root layout.
+  //
+  // Deliberately paired with a crawlable robots.txt (there is none, so
+  // everything is allowed): a "Disallow: /" would stop crawlers fetching these
+  // URLs at all, and a URL they can't fetch is one whose noindex they can never
+  // read — it could still be listed from an external link. Crawlable + noindex
+  // is the combination that actually removes a page from the index.
+  { key: "X-Robots-Tag", value: "noindex, nofollow" },
 ];
 
 // HSTS is only emitted in production. It's dropped in dev/HTTP and ships WITHOUT
