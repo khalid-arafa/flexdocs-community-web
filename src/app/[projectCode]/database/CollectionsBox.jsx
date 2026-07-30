@@ -104,6 +104,7 @@ function CollectionsBox() {
     getSocket(activeProject.projectToken).emit("watch-collections", {});
     return () => {
       getSocket(activeProject.projectToken).off(room, handleData);
+      getSocket(activeProject.projectToken).emit("unwatch-collections", {});
     };
   }, [activeProject]);
 

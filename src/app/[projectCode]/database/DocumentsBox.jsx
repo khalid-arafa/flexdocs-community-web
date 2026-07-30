@@ -226,6 +226,9 @@ function DocumentsBox() {
     });
     return () => {
       getSocket(activeProject.projectToken).off(room, handleData);
+      getSocket(activeProject.projectToken).emit("unwatch-col-updates", {
+        col: selectedCollection.name,
+      });
     };
   }, [activeProject, selectedCollection]);
 
