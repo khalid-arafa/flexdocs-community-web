@@ -24,6 +24,15 @@ const montserrat = localFont({
 export const metadata = {
   title: "FlexDocs Admin Dashboard",
   description: "Multi Databases Project",
+  // This is a private admin console — the login screen and every page behind it
+  // (dashboard, per-project database/storage/accounts, settings). Keep the whole
+  // thing out of search results. next.config.mjs sends the same directive as an
+  // X-Robots-Tag header, which additionally covers the middleware auth redirects
+  // that never render this layout.
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({ children }) {
