@@ -1,8 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronRight,
   Folder,
   File,
+  FileArchive,
+  FileAudio,
+  FileCode,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileVideo,
   Loader,
   MoreVerticalIcon,
   Copy,
@@ -15,10 +22,10 @@ import {
   deleteStorageFile,
   getBucketContent,
 } from "@/utils/api";
-import { API_URL } from "@/constants";
 import { formatDate } from "@/utils/datetime";
 import LoadMorePagination from "@/components/LoadMorePagination";
-import { formatBytes } from "@/utils/files";
+import { formatBytes, getFileUrl, isImageFile } from "@/utils/files";
+import { copyToClipboard } from "@/utils/clipboard";
 import { getSocket } from "@/utils/socket";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import DropdownButton from "@/components/DropdownButton";
@@ -27,6 +34,86 @@ import { showDialog } from "@/components/CustomDialog";
 import AddEditBucket from "./AddEditBucket";
 import { toast } from "react-toastify";
 import Tooltip from "@/components/Tooltip";
+
+const EXTENSION_ICONS = {
+  pdf: FileText,
+  doc: FileText,
+  docx: FileText,
+  txt: FileText,
+  md: FileText,
+  rtf: FileText,
+  csv: FileSpreadsheet,
+  xls: FileSpreadsheet,
+  xlsx: FileSpreadsheet,
+  zip: FileArchive,
+  rar: FileArchive,
+  "7z": FileArchive,
+  tar: FileArchive,
+  gz: FileArchive,
+  mp3: FileAudio,
+  wav: FileAudio,
+  ogg: FileAudio,
+  m4a: FileAudio,
+  mp4: FileVideo,
+  mov: FileVideo,
+  webm: FileVideo,
+  avi: FileVideo,
+  mkv: FileVideo,
+  json: FileCode,
+  yml: FileCode,
+  yaml: FileCode,
+  css: FileCode,
+  ts: FileCode,
+  tsx: FileCode,
+};
+
+const normalizeId = (id) => {
+  if (!id) return "";
+  if (typeof id === "string") return id;
+  if (typeof id === "object") {
+    if (id.$oid) return String(id.$oid);
+    if (typeof id.toString === "function") return id.toString();
+  }
+  return String(id);
+};
+
+const isInCurrentBucket = (item, currentBucketId) => {
+  if (!item) return false;
+  if (item.type === "bucket") {
+    return normalizeId(item.parentId) === currentBucketId;
+  }
+  return normalizeId(item.bucketId) === currentBucketId;
+};
+
+/**
+ * Row icon: images show an actual thumbnail (the API resizes on demand and
+ * caches the result), everything else gets an icon matching its extension.
+ * Declared at module scope so the <img> is not remounted — and the thumbnail
+ * not refetched — on every parent render.
+ */
+function ItemIcon({ item, thumbUrl }) {
+  const [thumbFailed, setThumbFailed] = useState(false);
+
+  if (item.type === "bucket")
+    return <Folder className="w-5 h-5 mr-2 text-brand shrink-0" />;
+
+  if (thumbUrl && !thumbFailed) {
+    return (
+      <img
+        src={thumbUrl}
+        alt=""
+        loading="lazy"
+        onError={() => setThumbFailed(true)}
+        className="w-5 h-5 mr-2 shrink-0 rounded-sm object-cover bg-gray-100"
+      />
+    );
+  }
+
+  const Icon =
+    EXTENSION_ICONS[String(item.ext || "").toLowerCase()] ||
+    (isImageFile(item) ? FileImage : File);
+  return <Icon className="w-5 h-5 mr-2 text-gray-500 shrink-0" />;
+}
 
 export default function StorageTabContent() {
   const [totalCount, setTotalCount] = useState(0);
@@ -41,6 +128,12 @@ export default function StorageTabContent() {
     useStorageContext();
 
   const { confirm } = useDialogs();
+
+  const currentBucketId = normalizeId(getCurrentBucket()?._id);
+  // The socket handler below is registered once per project, so it cannot read
+  // the bucket from its own closure without going stale.
+  const currentBucketIdRef = useRef(currentBucketId);
+  currentBucketIdRef.current = currentBucketId;
 
   // fetching
   const fetchContents = async (bucket) => {
@@ -85,28 +178,15 @@ export default function StorageTabContent() {
     setContent([]);
   };
 
-  const getDownloadableLink = ({ file, withToken = false }) => {
-    const url = `${API_URL}/projects/${file.projectCode}/storage/${file._id}/${file.name}.${file.ext}`;
-    return withToken || !activeProject.isPublic ? url + `?token=${activeProject.projectToken}` : url;
-  };
-
-  const normalizeId = (id) => {
-    if (!id) return "";
-    if (typeof id === "string") return id;
-    if (typeof id === "object") {
-      if (id.$oid) return String(id.$oid);
-      if (typeof id.toString === "function") return id.toString();
-    }
-    return String(id);
-  };
-
-  const isInCurrentBucket = (item, currentBucketId) => {
-    if (!item) return false;
-    if (item.type === "bucket") {
-      return normalizeId(item.parentId) === currentBucketId;
-    }
-    return normalizeId(item.bucketId) === currentBucketId;
-  };
+  const getDownloadableLink = ({ file, withToken = false, size }) =>
+    getFileUrl({
+      file,
+      token:
+        withToken || !activeProject?.isPublic
+          ? activeProject?.projectToken
+          : undefined,
+      size,
+    });
 
   const getItemMenuChoices = (item) => {
     let choices = [
@@ -152,11 +232,9 @@ export default function StorageTabContent() {
       choices.unshift({
         label: "Copy Downloadable Link",
         icon: <Copy size={18} color="black" />,
-        onClick: () => {
-          navigator.clipboard
-            .writeText(getDownloadableLink({ file: item }))
-            .then(() => console.log("Copied!"))
-            .catch((err) => console.error("Failed to copy", err));
+        onClick: async () => {
+          const ok = await copyToClipboard(getDownloadableLink({ file: item }));
+          toast(ok ? "Link copied to clipboard" : "Failed to copy the link");
         },
       });
     }
@@ -197,7 +275,13 @@ export default function StorageTabContent() {
 
   const handleData = async (payload) => {
     if (!payload) return;
-    const currentBucketId = normalizeId(getCurrentBucket()?._id);
+    // Read through the ref, not the render-time value: this handler is
+    // registered once per project and would otherwise keep comparing against
+    // whichever bucket was open when the socket was wired up. Every file
+    // uploaded after navigating into a bucket was dropped here, and only
+    // surfaced once something else forced a refetch (e.g. closing the
+    // uploader panel).
+    const currentBucketId = currentBucketIdRef.current;
 
     if (Array.isArray(payload.add) && payload.add.length) {
       const incoming = payload.add.filter((item) =>
@@ -213,10 +297,8 @@ export default function StorageTabContent() {
               ])
             ).values()
           );
-          const delta = merged.length - prev.length;
-          if (delta !== 0) {
-            setTotalCount((count) => Math.max(0, count));
-          }
+          const added = merged.length - prev.length;
+          if (added > 0) setTotalCount((count) => count + added);
           return merged;
         });
       }
@@ -256,22 +338,33 @@ export default function StorageTabContent() {
     setLoading(false);
   };
 
+  // Always call the latest handler, but register a stable listener so the
+  // cleanup can actually remove it — `off` with a freshly created function
+  // never matched, so listeners piled up on every re-render.
+  const handleDataRef = useRef(handleData);
+  handleDataRef.current = handleData;
+
   // Load contents when path changes
   useEffect(() => {
     if (!activeProject?.code) return;
     const room = `${activeProject.code}-storage`;
-    getSocket(activeProject.projectToken).on(room, handleData);
-    getSocket(activeProject.projectToken).emit("watch-buckets", {});
+    const socket = getSocket(activeProject.projectToken);
+    const listener = (payload) => handleDataRef.current(payload);
+    socket.on(room, listener);
+    socket.emit("watch-buckets", {});
     return () => {
-      getSocket(activeProject.projectToken).off(room, handleData);
-      getSocket(activeProject.projectToken).emit("stop-watch-buckets", {});
+      socket.off(room, listener);
+      socket.emit("stop-watch-buckets", {});
     };
   }, [activeProject]);
 
+  // Keyed on the bucket id rather than on getCurrentBucket's identity: that
+  // function is rebuilt on every StorageContext render, so the list used to
+  // refetch itself whenever an unrelated piece of context state changed.
   useEffect(() => {
     fetchContents(getCurrentBucket());
-  }, [page, getCurrentBucket, activeProject]);
-  
+  }, [page, currentBucketId, activeProject]);
+
   useEffect(() => {
     setPage(1);
     setTotalCount(0);
@@ -363,11 +456,18 @@ export default function StorageTabContent() {
 
                   {/* Name */}
                   <div className="flex items-center min-w-0 flex-1">
-                    {item.type === "bucket" ? (
-                      <Folder className="w-5 h-5 mr-2 text-brand shrink-0" />
-                    ) : (
-                      <File className="w-5 h-5 mr-2 text-gray-500 shrink-0" />
-                    )}
+                    <ItemIcon
+                      item={item}
+                      thumbUrl={
+                        item.type === "file" && isImageFile(item)
+                          ? getDownloadableLink({
+                              file: item,
+                              withToken: true,
+                              size: "small",
+                            })
+                          : null
+                      }
+                    />
                     <Tooltip text={getItemName(item)} className="min-w-0 flex-1">
                       <button
                         onClick={() => handleItemClick(item)}

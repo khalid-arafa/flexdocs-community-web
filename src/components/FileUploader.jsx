@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { X, CheckCircle, AlertCircle, File, Loader } from "lucide-react";
+import { X, CheckCircle, AlertCircle, File, Loader, Copy, Check } from "lucide-react";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import { getSocket } from "@/utils/socket";
 import { useStorageContext } from "@/context/StorageContext";
+import { API_URL } from "@/constants";
+import { copyToClipboard } from "@/utils/clipboard";
 
 export default function FileUploader() {
   const [files, setFiles] = useState([]);
+  const [copiedName, setCopiedName] = useState(null);
   const startedUploadsRef = useRef(new Set());
 
   const { activeProject } = useProjectsContext();
@@ -146,6 +149,31 @@ export default function FileUploader() {
     [activeProject]
   );
 
+  /**
+   * `upload:complete` carries the file's path relative to the API root, with
+   * the name segment already percent-encoded. Private projects need the
+   * project token for the link to resolve.
+   */
+  function downloadableLink(fileObj) {
+    if (!fileObj.url) return null;
+    const url = `${API_URL}/${String(fileObj.url).replace(/^\/+/, "")}`;
+    return activeProject?.isPublic
+      ? url
+      : `${url}?token=${encodeURIComponent(activeProject?.projectToken || "")}`;
+  }
+
+  async function copyLink(fileObj) {
+    const link = downloadableLink(fileObj);
+    if (!link) return;
+    const ok = await copyToClipboard(link);
+    if (!ok) return;
+    setCopiedName(fileObj.file.name);
+    setTimeout(
+      () => setCopiedName((prev) => (prev === fileObj.file.name ? null : prev)),
+      2000
+    );
+  }
+
   function removeFile(name) {
     setFiles((prev) => prev.filter((i) => i.file.name != name));
     setUploadFiles((prev) => prev.filter((i) => i.file.name != name));
@@ -233,14 +261,36 @@ export default function FileUploader() {
                         {fileObj.file.name}
                       </span>
                     </div>
-                    {fileObj.status !== "uploading" && (
-                      <button
-                        onClick={() => removeFile(fileObj.file.name)}
-                        className="text-gray-400 hover:text-gray-900 cursor-pointer px-1"
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
+                    <div className="flex items-center shrink-0">
+                      {fileObj.status === "complete" && fileObj.url && (
+                        <button
+                          onClick={() => copyLink(fileObj)}
+                          title="Copy downloadable link"
+                          aria-label="Copy downloadable link"
+                          className={`cursor-pointer px-1 ${
+                            copiedName === fileObj.file.name
+                              ? "text-green-600"
+                              : "text-gray-400 hover:text-gray-900"
+                          }`}
+                        >
+                          {copiedName === fileObj.file.name ? (
+                            <Check size={14} />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                        </button>
+                      )}
+                      {fileObj.status !== "uploading" && (
+                        <button
+                          onClick={() => removeFile(fileObj.file.name)}
+                          title="Remove from list"
+                          aria-label="Remove from list"
+                          className="text-gray-400 hover:text-gray-900 cursor-pointer px-1"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Progress bar */}
