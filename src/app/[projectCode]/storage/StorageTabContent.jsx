@@ -94,8 +94,12 @@ const isInCurrentBucket = (item, currentBucketId) => {
 function ItemIcon({ item, thumbUrl }) {
   const [thumbFailed, setThumbFailed] = useState(false);
 
+  // One box for every row so names stay aligned whether the row shows a
+  // thumbnail, a folder or a type icon.
+  const box = "w-10 h-10 mr-3 shrink-0";
+
   if (item.type === "bucket")
-    return <Folder className="w-5 h-5 mr-2 text-brand shrink-0" />;
+    return <Folder className={`${box} text-brand`} strokeWidth={1.5} />;
 
   if (thumbUrl && !thumbFailed) {
     return (
@@ -104,7 +108,7 @@ function ItemIcon({ item, thumbUrl }) {
         alt=""
         loading="lazy"
         onError={() => setThumbFailed(true)}
-        className="w-5 h-5 mr-2 shrink-0 rounded-sm object-cover bg-gray-100"
+        className={`${box} rounded object-cover bg-gray-100 border border-gray-200`}
       />
     );
   }
@@ -112,7 +116,7 @@ function ItemIcon({ item, thumbUrl }) {
   const Icon =
     EXTENSION_ICONS[String(item.ext || "").toLowerCase()] ||
     (isImageFile(item) ? FileImage : File);
-  return <Icon className="w-5 h-5 mr-2 text-gray-500 shrink-0" />;
+  return <Icon className={`${box} text-gray-500`} strokeWidth={1.5} />;
 }
 
 export default function StorageTabContent() {
@@ -502,7 +506,7 @@ export default function StorageTabContent() {
                 </div>
 
                 {/* Mobile-only details */}
-                <div className="md:hidden mt-3 space-y-2 text-sm pl-7 text-black">
+                <div className="md:hidden mt-3 space-y-2 text-sm pl-[52px] text-black">
                   {item.size && (
                     <div className="text-black">Size: {formatBytes(item.size)}</div>
                   )}
