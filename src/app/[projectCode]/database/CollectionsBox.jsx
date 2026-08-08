@@ -11,6 +11,7 @@ import { useDatabaseContext } from "@/context/DatabaseContext";
 import { toast } from "react-toastify";
 import { useLayoutContext } from "@/context/LayoutContext";
 import Tooltip from "@/components/Tooltip";
+import { mergeAdd, mergeUpdate, mergeDelete } from "@/utils/realtimeMerge";
 
 const compactNumberFormatter = new Intl.NumberFormat("en", {
   notation: "compact",
@@ -65,28 +66,15 @@ function CollectionsBox() {
 
   const handleData = async (data) => {
     if (data.add) {
-      setCollections((prev) =>
-        Array.from(
-          new Map(
-            [...prev, ...data.add].map((doc) => [doc.name, { ...doc }])
-          ).values()
-        )
-      );
+      setCollections((prev) => mergeAdd(prev, data.add, "name"));
       flashItems(data.add.map((d) => d.name));
     }
     if (data.update) {
-      setCollections((prev) =>
-        prev.map((col) => {
-          const updated = data.update.find((u) => u.name === col.name);
-          return updated ? { ...col, ...updated } : col;
-        })
-      );
+      setCollections((prev) => mergeUpdate(prev, data.update, "name"));
       flashItems(data.update.map((d) => d.name));
     }
     if (data.delete) {
-      setCollections((prev) =>
-        prev.filter((i) => !data.delete.some((d) => d.name === i.name))
-      );
+      setCollections((prev) => mergeDelete(prev, data.delete, "name"));
       setTotalCollectionsCount(totalCollectionsCount - data.delete.length);
       if (
         selectedCollectionRef.current &&

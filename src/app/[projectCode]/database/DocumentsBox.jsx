@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 import { getSocket } from "@/utils/socket";
 import { useDatabaseContext } from "@/context/DatabaseContext";
 import { useLayoutContext } from "@/context/LayoutContext";
+import { mergeAdd, mergeUpdate, mergeDelete } from "@/utils/realtimeMerge";
 
 function DocumentsBox() {
   const { sidebarClosed } = useLayoutContext();
@@ -135,13 +136,7 @@ function DocumentsBox() {
   const handleData = async (data) => {
     if (data.add) {
       // add the documents
-      setCollectionDocuments((prev) =>
-        Array.from(
-          new Map(
-            [...prev, ...data.add].map((doc) => [doc._id, { ...doc }])
-          ).values()
-        )
-      );
+      setCollectionDocuments((prev) => mergeAdd(prev, data.add));
       // change documents total count
       setTotalCollectionDocumentsCount(
         totalCollectionDocumentsCount + data.add.length
@@ -173,18 +168,7 @@ function DocumentsBox() {
       }
     }
     if (data.update) {
-      setCollectionDocuments((prev) =>
-        Array.from(
-          new Map(
-            prev
-              .map((doc) => {
-                const updated = data.update.find((u) => u._id === doc._id);
-                return updated ? { ...doc, ...updated } : doc;
-              })
-              .map((doc) => [doc._id, doc])
-          ).values()
-        )
-      );
+      setCollectionDocuments((prev) => mergeUpdate(prev, data.update));
 
       flashItems(data.update.map((d) => d._id));
 
@@ -200,9 +184,7 @@ function DocumentsBox() {
       }
     }
     if (data.delete) {
-      setCollectionDocuments((prev) =>
-        prev.filter((i) => !data.delete.some((d) => d._id === i._id))
-      );
+      setCollectionDocuments((prev) => mergeDelete(prev, data.delete));
       setTotalCollectionDocumentsCount(totalCollectionDocumentsCount - 1);
       setCollections((prev) =>
         prev.map((col) =>
