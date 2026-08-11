@@ -2,13 +2,20 @@
 
 // Origin of the API the dashboard talks to (REST + websockets). Allowed in CSP
 // connect-src/img-src so the strict policy doesn't block legitimate calls.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://api.localhost";
 const API_ORIGIN = (() => {
   try {
-    return new URL(process.env.NEXT_PUBLIC_API_URL || "http://api.localhost").origin;
+    return new URL(API_URL).origin;
   } catch {
     return "http://api.localhost";
   }
 })();
+
+// The websocket origin the realtime client actually dials (socket.js does
+// io(API_URL)). Deriving it from the API origin lets connect-src name exactly
+// that host instead of the blanket `ws: wss:` that allowed a socket to ANY
+// origin — the one hole in an otherwise pinned egress policy.
+const WS_ORIGIN = API_ORIGIN.replace(/^http/, "ws");
 
 // Baseline CSP for an admin dashboard. 'unsafe-inline'/'unsafe-eval' are kept for
 // script-src because Next.js + framer-motion need them without a nonce pipeline;
@@ -24,8 +31,11 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "font-src 'self' data:",
-  "img-src 'self' data: blob: https: http:",
-  `connect-src 'self' ${API_ORIGIN} ws: wss:`,
+  // `https:` stays: account avatars are arbitrary operator-supplied URLs and
+  // render as plain <img>. `http:` is dropped so a plaintext-image URL can't be
+  // used as a mixed-content tracking/exfil beacon on an HTTPS dashboard.
+  "img-src 'self' data: blob: https:",
+  `connect-src 'self' ${API_ORIGIN} ${WS_ORIGIN}`,
 ].join("; ");
 
 const securityHeaders = [
@@ -59,9 +69,9 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const nextConfig = {
-  images: {
-    remotePatterns: [new URL('https://picsum.photos/**')],
-  },
+  // No next/image component points at picsum — the avatar fallbacks are plain
+  // <img> and don't consult remotePatterns — so the placeholder-era allowance
+  // is dead config. Removed.
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -266,11 +266,17 @@ const Content = ({ forAdmin = false }) => {
                       user.isActive ? "" : "border-3 border-red-500"
                     }`}
                   >
+                    {/* Avatars are arbitrary operator-supplied URLs, so next/image
+                        optimization can't allowlist their hosts — `unoptimized`
+                        lets any URL render (governed by CSP img-src) instead of
+                        throwing for every host not in images.remotePatterns, which
+                        is what happened to any non-picsum avatar before. */}
                     <Image
                       src={user.avatar && /^https?:\/\//.test(user.avatar) ? user.avatar : "https://picsum.photos/80"}
                       alt={`${user.name}'s avatar`}
                       width={40}
                       height={40}
+                      unoptimized
                       className="rounded-full object-cover"
                     />
                   </div>
