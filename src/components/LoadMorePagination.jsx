@@ -12,7 +12,7 @@ function LoadMorePagination({
       {canLoadMore && (
         <button
           onClick={loadMore}
-          className={`w-30s cursor-pointer px-3 py-1 rounded hover:bg-gray-900 bg-gray-800 text-white`}
+          className={`cursor-pointer px-3 py-1 rounded hover:bg-gray-900 bg-gray-800 text-white`}
         >
           Load More
         </button>

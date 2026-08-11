@@ -23,7 +23,9 @@ function LoginForm() {
     try {
       setIsLoading(true);
       setError("");
-      await new Promise((res) => setTimeout(() => res(), 1000));
+      // Removed an artificial 1s delay that sat here: it slowed every login for
+      // no benefit. Client-side waiting is not a security control (the server
+      // owns rate-limiting and lockout); it only cost the operator a second.
       const result = await login(email, password);
       if (result.ok) return router.push("/");
       if (typeof result.json === "function") {

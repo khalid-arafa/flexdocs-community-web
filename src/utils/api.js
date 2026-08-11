@@ -102,7 +102,7 @@ export const getSystemUserById = async (id) => {
   const result = await get(`${API_URL}/admin/accounts/${encodeURIComponent(id)}`);
   return result;
 };
-export const deletSystemUserById = async (id) => {
+export const deleteSystemUserById = async (id) => {
   const result = await del({
     url: `${API_URL}/admin/accounts/${encodeURIComponent(id)}`,
   });

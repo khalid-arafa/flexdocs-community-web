@@ -25,7 +25,7 @@ import { formatDate } from "@/utils/datetime";
 import SetPasswordModal from "../../../components/SetPasswordModal";
 import {
   deleteAccount,
-  deletSystemUserById,
+  deleteSystemUserById,
   updateAccountData,
 } from "@/utils/api";
 import { toast } from "react-toastify";
@@ -104,7 +104,7 @@ const Content = ({ forAdmin = false }) => {
           if (!confirmed) return;
           try {
             const result = forAdmin
-              ? await deletSystemUserById(account.uid)
+              ? await deleteSystemUserById(account.uid)
               : await deleteAccount({
                   projectCode: activeProject.code,
                   docId: account.uid,
@@ -210,12 +210,18 @@ const Content = ({ forAdmin = false }) => {
         setAccounts((prev) =>
           prev.filter((i) => !data.delete.map((x) => x.uid).includes(i.uid))
         );
-        setAccountsTotalCount(accountsTotalCount - data.delete.length);
+        // Functional update: this handler is bound once per effect, so reading
+        // accountsTotalCount from the closure drifted after any earlier event.
+        setAccountsTotalCount((prev) => prev - data.delete.length);
       }
     };
-    getSocket(activeProject.projectToken).on(room, handleData);
-    getSocket(activeProject.projectToken).emit("watch-accounts", {});
-    return () => getSocket(activeProject.projectToken).off(room, handleData);
+    // Guard a null socket (project without a token) — .on() on null would crash
+    // the accounts tab, same as the database panels did.
+    const socket = getSocket(activeProject.projectToken);
+    if (!socket) return;
+    socket.on(room, handleData);
+    socket.emit("watch-accounts", {});
+    return () => socket.off(room, handleData);
   }, [activeProject]);
 
   useEffect(() => {    

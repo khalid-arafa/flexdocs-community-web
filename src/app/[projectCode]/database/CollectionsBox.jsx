@@ -223,7 +223,7 @@ function CollectionsBox() {
             totalCollectionsCount > collections.length && (
               <div className="p-3 text-center">
                 <button
-                  className="w-30s cursor-pointer px-3 py-1 rounded hover:bg-gray-900 bg-gray-800 text-white"
+                  className="cursor-pointer px-3 py-1 rounded hover:bg-gray-900 bg-gray-800 text-white"
                   onClick={() => setCollectionsPage(collectionsPage + 1)}
                 >
                   Load More
