@@ -183,6 +183,11 @@ export const DatabaseContextProvider = ({ children }) => {
         selectCollection,
         documentsPage,
         setDocumentsPage,
+        // Was never exposed, so DocumentsBox's `loadingCollectionDocuments` read
+        // undefined and its first-load spinner never rendered — the panel jumped
+        // straight from the previous view to "No documents found" until the
+        // fetch resolved. Exposed now.
+        loadingCollectionDocuments,
         loadingMoreCollectionDocuments,
         collectionsPage,
         setCollectionsPage,

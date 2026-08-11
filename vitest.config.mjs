@@ -13,10 +13,11 @@ export default defineConfig({
     },
   },
   test: {
-    // Pure-logic suite only (no component rendering yet) — the default
-    // "node" environment is enough and keeps jsdom out of the dependency
-    // tree until a test actually needs a DOM.
+    // Default to node for the pure-logic suite. Component/hook tests opt into a
+    // DOM per-file with a `// @vitest-environment jsdom` docblock, so jsdom only
+    // loads for the files that need it. Modules that contain JSX are named
+    // `.jsx` so the default transform parses them without extra plugins.
     environment: "node",
-    include: ["src/**/*.test.js"],
+    include: ["src/**/*.test.{js,jsx}"],
   },
 });
