@@ -1,6 +1,6 @@
 import React from 'react'
 
-function Button({children, onClick, className = "", type = "button", variant = "primary", isLoading = false}) {
+function Button({children, onClick, className = "", type = "button", variant = "primary", isLoading = false, ref}) {
   const getClasses = () => {
     let classes = "w-full cursor-pointer text-white py-3 px-4 rounded-xl font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ";    
     if(variant === "primary") {
@@ -16,6 +16,7 @@ function Button({children, onClick, className = "", type = "button", variant = "
   
   return (
     <button
+      ref={ref}
       type={type}
       className={getClasses()}
       disabled={isLoading}

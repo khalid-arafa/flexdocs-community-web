@@ -58,8 +58,16 @@ export function DialogsProvider({ children }) {
 }
 
 // Confirm Dialog
+//
+// Accessibility: it is a real modal, so it says so (role="dialog",
+// aria-modal), names itself via aria-labelledby/aria-describedby, closes on
+// Escape, and moves focus to the safe default (Cancel) on open so a stray
+// Enter/Space can't confirm a destructive action.
 function ConfirmDialog({ title, msg, onClick }) {
   const [isVisible, setIsVisible] = useState(false);
+  const cancelRef = useRef(null);
+  const titleId = "confirm-dialog-title";
+  const msgId = "confirm-dialog-msg";
 
   const handleClick = async (value) => {
     setIsVisible(false);
@@ -67,11 +75,24 @@ function ConfirmDialog({ title, msg, onClick }) {
     onClick(value);
   };
 
-  useEffect(() => setIsVisible(true), []);
+  useEffect(() => {
+    setIsVisible(true);
+    // Default focus to Cancel: for a destructive confirm the safe choice should
+    // be the one a reflexive keypress hits.
+    cancelRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") handleClick(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center transition-all duration-300 ease-in-out 
+      className={`fixed inset-0 flex items-center justify-center transition-all duration-300 ease-in-out
         ${isVisible ? "z-10 backdrop-blur-sm" : "-z-10 backdrop-blur-none"}`}
     >
       <div
@@ -80,14 +101,26 @@ function ConfirmDialog({ title, msg, onClick }) {
         onClick={() => handleClick(false)}
       />
       <div
-        className={`bg-white p-8 pb-6 rounded-3xl text-black z-20 transition-all duration-300 ease-in-out 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-describedby={msg ? msgId : undefined}
+        className={`bg-white p-8 pb-6 rounded-3xl text-black z-20 transition-all duration-300 ease-in-out
           ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}
       >
-        {title && <p className="font-bold text-black text-xl">{title}</p>}
-        {msg && <p className="mt-2">{msg}</p>}
+        {title && (
+          <p id={titleId} className="font-bold text-black text-xl">
+            {title}
+          </p>
+        )}
+        {msg && (
+          <p id={msgId} className="mt-2">
+            {msg}
+          </p>
+        )}
         <div className="flex w-[80%]">
           <div className="flex justify-end gap-4 mt-6">
-            <Button variant="cancel" onClick={() => handleClick(false)}>
+            <Button ref={cancelRef} variant="cancel" onClick={() => handleClick(false)}>
               No
             </Button>
             <Button onClick={() => handleClick(true)}>Yes</Button>

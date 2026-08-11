@@ -101,8 +101,10 @@ function DocumentsBox() {
           label: "Delete Collection",
           icon: <X size={18} />,
           onClick: async () => {
+            const count = selectedCollection.documentsCount || 0;
             const confirmed = await confirm({
-              msg: "Are you sure, you want to delete this?",
+              title: "Delete collection",
+              msg: `Delete "${selectedCollection.name}" and all ${count.toLocaleString()} document${count === 1 ? "" : "s"} in it? This cannot be undone.`,
             });
             if (!confirmed) return;
             try {
