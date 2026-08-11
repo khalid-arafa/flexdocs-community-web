@@ -358,9 +358,15 @@ export const renameCollection = async ({ projectCode, collectionName, newName })
   return result;
 };
 export const deleteCollection = async ({ projectCode, collectionName }) => {
+  // Deleting a COLLECTION means sending NO filter: the API's DELETE /:col drops
+  // the whole collection only on the admin-with-no-filter path, and treats any
+  // filter — including `{}` — as a bulk document delete that leaves the empty
+  // collection behind and emits no collection-delete event. The previous code
+  // passed `data: { filter: {} }`, which happened to work only because `del()`
+  // reads `body`, not `data`, so the filter was silently dropped. Sending no
+  // body makes that intent explicit instead of accidental.
   const result = await del({
     url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/${encodeURIComponent(collectionName)}`,
-    data: { filter: {} },
   });
   return result;
 };

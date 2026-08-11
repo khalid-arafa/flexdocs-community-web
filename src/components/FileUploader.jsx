@@ -10,8 +10,12 @@ import { copyToClipboard } from "@/utils/clipboard";
 
 export default function FileUploader() {
   const [files, setFiles] = useState([]);
-  const [copiedName, setCopiedName] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
   const startedUploadsRef = useRef(new Set());
+  // Names with an upload currently in flight. The server keys its in-progress
+  // uploads by name, so a second concurrent upload of the same name would
+  // clobber the first's server-side state — refused below.
+  const inFlightNamesRef = useRef(new Set());
 
   const { activeProject } = useProjectsContext();
 
@@ -24,26 +28,41 @@ export default function FileUploader() {
       if (startedUploadsRef.current.has(uploadKey)) return;
       startedUploadsRef.current.add(uploadKey);
 
-      setFiles((prev) => {
-        const exists = prev.some(
-          (f) =>
-            f.file.name === fileObj.file.name &&
-            f.file.size === fileObj.file.size &&
-            f.file.lastModified === fileObj.file.lastModified
-        );
-        if (exists) return prev;
-        return [...prev, { file: fileObj.file, status: "preparing", progress: 0 }];
-      });
-
+      // Route every status update by this stable key, NOT by file.name. The
+      // wire protocol and the progress/complete/error events are name-keyed, so
+      // two different files sharing a name would otherwise apply each other's
+      // updates. `key` keeps them distinct in the UI.
       const updateFileStatus = (updates) => {
         setFiles((prev) =>
-          prev.map((f) =>
-            f.file.name === fileObj.file.name
-              ? { ...f, ...updates }
-              : f
-          )
+          prev.map((f) => (f.key === uploadKey ? { ...f, ...updates } : f))
         );
       };
+
+      // The server cannot run two same-named uploads at once (it stores them in
+      // socket.activeUploads[name]); the second would corrupt the first. Refuse
+      // it here, visibly, rather than letting both silently break.
+      if (inFlightNamesRef.current.has(fileObj.file.name)) {
+        setFiles((prev) => [
+          ...prev,
+          {
+            key: uploadKey,
+            file: fileObj.file,
+            status: "error",
+            progress: 0,
+            error: "Another file with this name is still uploading",
+          },
+        ]);
+        startedUploadsRef.current.delete(uploadKey);
+        return;
+      }
+
+      setFiles((prev) => {
+        if (prev.some((f) => f.key === uploadKey)) return prev;
+        return [
+          ...prev,
+          { key: uploadKey, file: fileObj.file, status: "preparing", progress: 0 },
+        ];
+      });
 
       const socket = getSocket(activeProject?.projectToken);
 
@@ -52,6 +71,10 @@ export default function FileUploader() {
         startedUploadsRef.current.delete(uploadKey);
         return;
       }
+
+      inFlightNamesRef.current.add(fileObj.file.name);
+      const releaseInFlight = () =>
+        inFlightNamesRef.current.delete(fileObj.file.name);
 
       const cleanupListeners = () => {
         socket.off("upload:ready", handleReady);
@@ -63,6 +86,11 @@ export default function FileUploader() {
       const chunkSize = 64 * 1024;
       let offset = 0;
       let isReady = false;
+      // True between sending a chunk and receiving its ack. A duplicate or
+      // out-of-order progress event arriving while this is false is ignored, so
+      // the offset advances exactly once per chunk actually sent — the old
+      // unconditional `offset += chunkSize` let a re-emitted ack skip bytes.
+      let awaitingAck = false;
 
       const readAndUploadChunk = () => {
         const reader = new FileReader();
@@ -76,9 +104,11 @@ export default function FileUploader() {
             });
             cleanupListeners();
             startedUploadsRef.current.delete(uploadKey);
+            releaseInFlight();
             return;
           }
 
+          awaitingAck = true;
           socket.emit("upload:chunk", {
             name: fileObj.file.name,
             chunk: new Uint8Array(e.target.result),
@@ -99,6 +129,8 @@ export default function FileUploader() {
       const handleProgress = (data) => {
         if (!isReady) return;
         if (data?.name !== fileObj.file.name || !data?.received) return;
+        if (!awaitingAck) return; // duplicate/out-of-order ack — advance once only
+        awaitingAck = false;
 
         offset += chunkSize;
         const progress = Math.min(
@@ -122,6 +154,7 @@ export default function FileUploader() {
           url: data.url,
         });
         cleanupListeners();
+        releaseInFlight();
       };
 
       const handleError = (error) => {
@@ -131,6 +164,7 @@ export default function FileUploader() {
           typeof error === "string" ? error : error?.message || "Upload failed";
         updateFileStatus({ status: "error", error: errorMessage });
         cleanupListeners();
+        releaseInFlight();
       };
 
       socket.on("upload:ready", handleReady);
@@ -167,19 +201,22 @@ export default function FileUploader() {
     if (!link) return;
     const ok = await copyToClipboard(link);
     if (!ok) return;
-    setCopiedName(fileObj.file.name);
+    setCopiedKey(fileObj.key);
     setTimeout(
-      () => setCopiedName((prev) => (prev === fileObj.file.name ? null : prev)),
+      () => setCopiedKey((prev) => (prev === fileObj.key ? null : prev)),
       2000
     );
   }
 
-  function removeFile(name) {
-    setFiles((prev) => prev.filter((i) => i.file.name != name));
-    setUploadFiles((prev) => prev.filter((i) => i.file.name != name));
-    for (const key of startedUploadsRef.current) {
-      if (key.startsWith(`${name}_`)) startedUploadsRef.current.delete(key);
-    }
+  function removeFile(key) {
+    setFiles((prev) => prev.filter((i) => i.key !== key));
+    setUploadFiles((prev) =>
+      prev.filter(
+        (i) =>
+          `${i.file.name}_${i.file.size}_${i.file.lastModified || 0}` !== key
+      )
+    );
+    startedUploadsRef.current.delete(key);
   }
 
   function clearCompleted() {
@@ -251,7 +288,7 @@ export default function FileUploader() {
             ) : (
               files.map((fileObj) => (
                 <div
-                  key={fileObj.file.name}
+                  key={fileObj.key}
                   className="mb-2 p-2 rounded bg-gray-200 shadow-lg"
                 >
                   <div className="flex justify-between items-center mb-1">
@@ -268,12 +305,12 @@ export default function FileUploader() {
                           title="Copy downloadable link"
                           aria-label="Copy downloadable link"
                           className={`cursor-pointer px-1 ${
-                            copiedName === fileObj.file.name
+                            copiedKey === fileObj.key
                               ? "text-green-600"
                               : "text-gray-400 hover:text-gray-900"
                           }`}
                         >
-                          {copiedName === fileObj.file.name ? (
+                          {copiedKey === fileObj.key ? (
                             <Check size={14} />
                           ) : (
                             <Copy size={14} />
@@ -282,7 +319,7 @@ export default function FileUploader() {
                       )}
                       {fileObj.status !== "uploading" && (
                         <button
-                          onClick={() => removeFile(fileObj.file.name)}
+                          onClick={() => removeFile(fileObj.key)}
                           title="Remove from list"
                           aria-label="Remove from list"
                           className="text-gray-400 hover:text-gray-900 cursor-pointer px-1"

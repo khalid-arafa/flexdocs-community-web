@@ -1,7 +1,7 @@
 "use client";
 
 import { getCollectionDocuments, getDatabaseCollections } from "@/utils/api";
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useRef, useState } from "react";
 
 const DatabaseContext = createContext();
 
@@ -28,6 +28,21 @@ export const DatabaseContextProvider = ({ children }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [error, setError] = useState(null);
 
+  // Concurrency guards. State flags (loadingCollections etc.) can't gate
+  // re-entrancy because setState is async: a second Load-More click, or a
+  // collection switch, fires before the flag it should have seen has committed.
+  //
+  // - `inFlight` sets dedupe an identical request already running (rapid clicks
+  //   on the same page), keyed by request identity.
+  // - `reqId` counters mark the most-recent request. A response whose id is no
+  //   longer current has been superseded (the user switched collection/project)
+  //   and is dropped, so a slow earlier response can't overwrite fresher data
+  //   or clear the spinner the newer request is still showing.
+  const colsReqIdRef = useRef(0);
+  const colsInFlightRef = useRef(new Set());
+  const docsReqIdRef = useRef(0);
+  const docsInFlightRef = useRef(new Set());
+
   const getCollections = () => {
     if (searchTerm)
       return collections.filter((i) => i.name.startsWith(searchTerm));
@@ -35,7 +50,12 @@ export const DatabaseContextProvider = ({ children }) => {
   };
 
   const loadCollections = async ({ projectCode, page }) => {
-    if (loadingCollections || !projectCode) return;
+    if (!projectCode) return;
+    const requestKey = `${projectCode}#${page}`;
+    if (colsInFlightRef.current.has(requestKey)) return;
+    colsInFlightRef.current.add(requestKey);
+    const reqId = ++colsReqIdRef.current;
+
     const isFirstPage = page === 1;
     if (isFirstPage) setLoadingCollections(true);
     else setLoadingMoreCollections(true);
@@ -47,6 +67,7 @@ export const DatabaseContextProvider = ({ children }) => {
         page,
       });
       const body = await result.json();
+      if (reqId !== colsReqIdRef.current) return; // superseded
       if (result.ok) {
         // Page 1 is a fresh load (e.g. after switching projects) so it must
         // replace the existing list; later pages append for "Load More".
@@ -65,10 +86,13 @@ export const DatabaseContextProvider = ({ children }) => {
         setError(body.message || "Failed to load collections");
       }
     } catch (err) {
-      setError("Failed to load collections");
+      if (reqId === colsReqIdRef.current) setError("Failed to load collections");
     } finally {
-      setLoadingCollections(false);
-      setLoadingMoreCollections(false);
+      colsInFlightRef.current.delete(requestKey);
+      if (reqId === colsReqIdRef.current) {
+        setLoadingCollections(false);
+        setLoadingMoreCollections(false);
+      }
     }
   };
 
@@ -83,9 +107,19 @@ export const DatabaseContextProvider = ({ children }) => {
   };
 
   const loadCollectionDocuments = async ({ projectCode, page }) => {
-    if (!projectCode) return;
-    if (loadingCollectionDocuments === true || !selectedCollection) return;
-    if (!collectionDocuments.length) setLoadingCollectionDocuments(true);
+    if (!projectCode || !selectedCollection) return;
+    const collectionName = selectedCollection.name;
+    const requestKey = `${collectionName}#${page}`;
+    if (docsInFlightRef.current.has(requestKey)) return;
+    docsInFlightRef.current.add(requestKey);
+    const reqId = ++docsReqIdRef.current;
+
+    // Decide the spinner from the PAGE, not from collectionDocuments.length.
+    // selectCollection resets the list then calls this synchronously, so the
+    // length still read the PREVIOUS collection's docs — picking the "load
+    // more" spinner and leaving the old rows on screen during the switch.
+    const isFirstPage = page === 1;
+    if (isFirstPage) setLoadingCollectionDocuments(true);
     else setLoadingMoreCollectionDocuments(true);
     setError(null);
 
@@ -93,13 +127,19 @@ export const DatabaseContextProvider = ({ children }) => {
       const result = await getCollectionDocuments({
         projectCode,
         page,
-        collectionName: selectedCollection.name,
+        collectionName,
       });
       const body = await result.json();
+      if (reqId !== docsReqIdRef.current) return; // superseded by a newer load
       if (result.ok) {
         setCollectionDocuments((prev) =>
           Array.from(
-            new Map([...prev, ...body.docs].map((doc) => [doc._id, doc])).values()
+            new Map(
+              [...(isFirstPage ? [] : prev), ...body.docs].map((doc) => [
+                doc._id,
+                doc,
+              ])
+            ).values()
           )
         );
         setTotalCollectionDocumentsCount(body.totalCount);
@@ -107,10 +147,13 @@ export const DatabaseContextProvider = ({ children }) => {
         setError(body.message || "Failed to load documents");
       }
     } catch (err) {
-      setError("Failed to load documents");
+      if (reqId === docsReqIdRef.current) setError("Failed to load documents");
     } finally {
-      setLoadingCollectionDocuments(false);
-      setLoadingMoreCollectionDocuments(false);
+      docsInFlightRef.current.delete(requestKey);
+      if (reqId === docsReqIdRef.current) {
+        setLoadingCollectionDocuments(false);
+        setLoadingMoreCollectionDocuments(false);
+      }
     }
   };
 

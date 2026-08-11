@@ -75,7 +75,10 @@ function CollectionsBox() {
     }
     if (data.delete) {
       setCollections((prev) => mergeDelete(prev, data.delete, "name"));
-      setTotalCollectionsCount(totalCollectionsCount - data.delete.length);
+      // Functional update: this handler is bound once per effect, so reading
+      // totalCollectionsCount from the closure went stale after any earlier
+      // event and the count drifted.
+      setTotalCollectionsCount((prev) => prev - data.delete.length);
       if (
         selectedCollectionRef.current &&
         data.delete.some((i) => selectedCollectionRef.current.name === i.name)
@@ -87,12 +90,15 @@ function CollectionsBox() {
 
   useEffect(() => {
     if (!activeProject?.code) return;
+    // Guard against a null socket (project without a token) — see DocumentsBox.
+    const socket = getSocket(activeProject.projectToken);
+    if (!socket) return;
     const room = `update:${activeProject.code}/collections`;
-    getSocket(activeProject.projectToken).on(room, handleData);
-    getSocket(activeProject.projectToken).emit("watch-collections", {});
+    socket.on(room, handleData);
+    socket.emit("watch-collections", {});
     return () => {
-      getSocket(activeProject.projectToken).off(room, handleData);
-      getSocket(activeProject.projectToken).emit("unwatch-collections", {});
+      socket.off(room, handleData);
+      socket.emit("unwatch-collections", {});
     };
   }, [activeProject]);
 

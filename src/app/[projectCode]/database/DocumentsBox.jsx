@@ -137,10 +137,13 @@ function DocumentsBox() {
     if (data.add) {
       // add the documents
       setCollectionDocuments((prev) => mergeAdd(prev, data.add));
-      // change documents total count
-      setTotalCollectionDocumentsCount(
-        totalCollectionDocumentsCount + data.add.length
-      );
+      // Change the documents total via a functional update. This handler is
+      // bound once per [activeProject, selectedCollection] effect, so reading
+      // `totalCollectionDocumentsCount` from the closure captured a value that
+      // went stale the moment any earlier event changed it — two events between
+      // re-subscriptions both computed from the same base and the total drifted.
+      // The total gates "Load More", so drift hid or fabricated pages.
+      setTotalCollectionDocumentsCount((prev) => prev + data.add.length);
 
       // change documents count in collections list
       setCollections((prev) =>
@@ -185,7 +188,10 @@ function DocumentsBox() {
     }
     if (data.delete) {
       setCollectionDocuments((prev) => mergeDelete(prev, data.delete));
-      setTotalCollectionDocumentsCount(totalCollectionDocumentsCount - 1);
+      // Was `- 1`, so a batch delete of N documents only ever decremented the
+      // total by one while the per-collection count below correctly subtracted
+      // data.delete.length — the two counters disagreed after any multi-delete.
+      setTotalCollectionDocumentsCount((prev) => prev - data.delete.length);
       setCollections((prev) =>
         prev.map((col) =>
           col.name === selectedCollection.name
@@ -201,14 +207,19 @@ function DocumentsBox() {
 
   useEffect(() => {
     if (!activeProject?.code || !selectedCollection?.name) return;
+    // getSocket returns null when the project has no token — calling .on() on
+    // that null crashed the whole database screen. FileUploader already guarded
+    // this; the two database panels did not.
+    const socket = getSocket(activeProject.projectToken);
+    if (!socket) return;
     const room = `update:${activeProject.code}/${selectedCollection.name}`;
-    getSocket(activeProject.projectToken).on(room, handleData);
-    getSocket(activeProject.projectToken).emit("watch-col-updates", {
+    socket.on(room, handleData);
+    socket.emit("watch-col-updates", {
       col: selectedCollection.name,
     });
     return () => {
-      getSocket(activeProject.projectToken).off(room, handleData);
-      getSocket(activeProject.projectToken).emit("unwatch-col-updates", {
+      socket.off(room, handleData);
+      socket.emit("unwatch-col-updates", {
         col: selectedCollection.name,
       });
     };
