@@ -65,7 +65,7 @@ function DocumentBox() {
   
   const getLayoutClassnames = () => {
     let classnames = "flex flex-1 bg-white rounded-lg shadow flex flex-col h-[77vh] ";
-    classnames += "w-full md:w-[calc(100vw-280px-8em)] lg:w-[calc(100vw-280px-260px-280px-8em)] xl:max-w-[580px] "
+    classnames += "w-full md:w-[calc(100vw-280px-8em)] lg:w-[calc(100vw-280px-260px-280px-8em)] xl:max-w-145 "
     if(sidebarClosed) classnames += "lg:w-[100vw-2em)]"
     return classnames;
   }
@@ -73,7 +73,7 @@ function DocumentBox() {
   return (
     <div className="flex">
       <div className={getLayoutClassnames()}>
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between h-[120px]">
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between h-30">
           <div>
             <h2 className="text-lg font-semibold mb-1 text-black">
               {selectedDocument ? (

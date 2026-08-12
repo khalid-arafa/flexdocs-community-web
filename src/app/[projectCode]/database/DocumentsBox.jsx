@@ -233,7 +233,7 @@ function DocumentsBox() {
 
   const getLayoutClassnames = () => {
     let classnames = "bg-white rounded-lg shadow  flex flex-col h-[77vh] ";
-    classnames += "w-full md:w-[calc((100vw-280px-7em)/2)] xl:w-[280px] "
+    classnames += "w-full md:w-[calc((100vw-280px-7em)/2)] xl:w-70 "
     if(sidebarClosed) classnames += "md:w-[calc(50vw-62px-1em)]"
     return classnames;
   }
@@ -241,7 +241,7 @@ function DocumentsBox() {
   return (
     <div>
       <div className={getLayoutClassnames()}>
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between h-[120px]">
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between h-30">
           <div>
             <h2 className="text-lg font-semibold mb-1 text-black">
               {selectedCollection ? selectedCollection.name : "Documents"}

@@ -106,7 +106,7 @@ export default function NewProject() {
 
         <div
           className={`flex-1 min-h-screen bg-gray-100 flex flex-col justify-center items-center transition-all duration-400 ease-in-out ${
-            !sidebarClosed ? "lg:ml-[300px]" : "lg:ml-16"
+            !sidebarClosed ? "lg:ml-75" : "lg:ml-16"
           }`}
         >
           <motion.div
@@ -165,7 +165,7 @@ export default function NewProject() {
                     className="mt-2 bg-white text-md px-4 py-3 text-black block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
                   {formData.code && (
-                    <div className="mt-2 flex-shrink-0">
+                    <div className="mt-2 shrink-0">
                       {checkingCode ? (
                         <Loader className="w-5 h-5 animate-spin text-gray-800" />
                       ) : validCode ? (

@@ -129,7 +129,7 @@ export default function AdminSettings() {
           <Button
             type="submit"
             isLoading={saving}
-            className="flex items-center justify-center gap-2 max-w-[200px]"
+            className="flex items-center justify-center gap-2 max-w-50"
           >
             <Check size={22} color="white" />
             Save Changes

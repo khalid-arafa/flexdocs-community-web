@@ -23,7 +23,7 @@ export default function Tabs({ tabs = [], trailing }) {
     <div className="w-full max-w-6xl mx-auto rounded-lg p-2 md:p-6">
       {/* Tab navigation with content-based width and trailing section */}
       <div className="flex border-b border-gray-200 relative">
-        <div className="flex flex-grow">
+        <div className="flex grow">
           {tabs.map((tab, index) => (
             <div
               key={index}

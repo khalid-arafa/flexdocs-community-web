@@ -80,7 +80,7 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundCo
           <Button
             onClick={onCancel}
             variant="cancel"
-            className={`max-w-[150px]`}
+            className={`max-w-37.5`}
           >
             Cancel
           </Button>
@@ -92,7 +92,7 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundCo
               setIsValid(true);
               setTimeout(() => setIsChanged(false), 200);
             }}
-            className={`max-w-[150px]`}
+            className={`max-w-37.5`}
           >
             Revert
           </Button>
@@ -100,7 +100,7 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundCo
         <Button
           onClick={handleSave}
           disabled={!isValid}
-          className={`max-w-[150px]`}
+          className={`max-w-37.5`}
         >
           Save
         </Button>

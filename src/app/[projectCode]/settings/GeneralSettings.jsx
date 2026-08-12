@@ -165,14 +165,14 @@ function GeneralSettings() {
             type="button"
             variant='cancel'
             onClick={deleteProject}
-            className="flex items-center justify-center gap-2 px-4 py-2 max-w-[200px]"
+            className="flex items-center justify-center gap-2 px-4 py-2 max-w-50"
           >
             <Trash size={22} color="white" />
             Delete Project
           </Button>
           <Button
             type='submit'
-            className="flex items-center justify-center gap-2 px-4 py-2 max-w-[200px]"
+            className="flex items-center justify-center gap-2 px-4 py-2 max-w-50"
           >
             <Check size={22} color="white" />
             Save Project

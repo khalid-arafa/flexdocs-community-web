@@ -185,7 +185,7 @@ function AddEditAccount({
           <Button
             variant="cancel"
             onClick={(e) => onDone()}
-            className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer max-w-[150px]"
+            className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer max-w-37.5"
           >
             Cancel
           </Button>
@@ -193,7 +193,7 @@ function AddEditAccount({
             onClick={async () => {
               await onSubmit();
             }}
-            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer max-w-[150px]"
+            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer max-w-37.5"
           >
             Submit
           </Button>

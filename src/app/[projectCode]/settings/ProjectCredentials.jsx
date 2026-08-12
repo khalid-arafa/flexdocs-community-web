@@ -98,7 +98,7 @@ function ProjectCredentials() {
               },
             });
           }}
-          className="flex items-center justify-center gap-2 px-4 py-2 w-[200px]!"
+          className="flex items-center justify-center gap-2 px-4 py-2 w-50!"
         >
           <Plus size={22} className="text-white" />
           <span>Generate Creds</span>
@@ -127,7 +127,7 @@ function ProjectCredentials() {
                     </p>
                   </div>
 
-                  <div className="flex gap-3 lg:flex-shrink-0">
+                  <div className="flex gap-3 lg:shrink-0">
                     <Button
                       onClick={() => handleDownload(cred)}
                       className="flex items-center justify-center gap-2 px-4 py-2"

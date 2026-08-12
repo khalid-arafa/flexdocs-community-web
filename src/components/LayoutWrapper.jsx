@@ -9,7 +9,7 @@ function LayoutWrapper({sidebar, children}) {
 
   const getClassnames = () => {
     let classnames = "min-h-screen bg-gray-100 w-full flex flex-col transition-all overflow-hidden duration-400 ease-in-out";
-    classnames += !sidebarClosed ? "ml-0 md:ml-[300px] " : " ml-0 md:ml-16 md:w-[calc(100%-62px)]"
+    classnames += !sidebarClosed ? "ml-0 md:ml-75 " : " ml-0 md:ml-16 md:w-[calc(100%-62px)]"
     return classnames;
   }
 

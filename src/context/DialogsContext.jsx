@@ -167,7 +167,7 @@ function AlertDialog({ type = "success", msg, onDismiss }) {
       aria-live="assertive"
       onMouseEnter={pauseTimer}
       onMouseLeave={resetTimer}
-      className={`fixed top-24 left-0 w-full max-w-[350px] mx-4 ${bgColor} text-white rounded-2xl z-10 
+      className={`fixed top-24 left-0 w-full max-w-87.5 mx-4 ${bgColor} text-white rounded-2xl z-10 
         flex items-stretch transition-all duration-300 ease-in-out
         ${
           classNames === "active"
@@ -177,7 +177,7 @@ function AlertDialog({ type = "success", msg, onDismiss }) {
             : "opacity-0 translate-y-10"
         }`}
     >
-      <div className="py-3 pl-6 pr-1.5 flex items-start justify-center font-bold text-base leading-8 flex-grow text-right">
+      <div className="py-3 pl-6 pr-1.5 flex items-start justify-center font-bold text-base/8 grow text-right">
         {msg}
       </div>
       <div

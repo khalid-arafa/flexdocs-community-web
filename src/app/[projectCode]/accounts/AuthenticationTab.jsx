@@ -255,7 +255,7 @@ const Content = ({ forAdmin = false }) => {
             <div className="flex-1 min-w-0">Email</div>
             <div className="hidden lg:block flex-1 min-w-0">UID</div>
             <div className="hidden lg:block flex-1 min-w-0">Created At</div>
-            <div className="flex-shrink-0 w-[42px] text-center">Options</div>
+            <div className="shrink-0 w-10.5 text-center">Options</div>
           </div>
 
           {/* Cards */}
@@ -268,7 +268,7 @@ const Content = ({ forAdmin = false }) => {
                 {/* Name */}
                 <div className="flex flex-row gap-4 font-bold items-center min-w-0 flex-1">
                   <div
-                    className={`h-10 w-10 relative rounded-full flex-shrink-0 ${
+                    className={`h-10 w-10 relative rounded-full shrink-0 ${
                       user.isActive ? "" : "border-3 border-red-500"
                     }`}
                   >
@@ -305,7 +305,7 @@ const Content = ({ forAdmin = false }) => {
                 </div>
 
                 {/* Options */}
-                <div className="flex items-center justify-center flex-shrink-0">
+                <div className="flex items-center justify-center shrink-0">
                   <DropdownButton
                     button={
                       <div className="cursor-pointer hover:bg-white p-2 rounded-full transition-all duration-300 ease-in-out">

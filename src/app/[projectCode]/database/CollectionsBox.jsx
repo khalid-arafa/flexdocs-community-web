@@ -130,7 +130,7 @@ function CollectionsBox() {
 
   const getLayoutClassnames = () => {
     let classnames = "bg-white rounded-lg shadow overflow-hidden flex flex-col h-[77vh] ";
-    classnames += "w-full md:w-[calc((100vw-280px-7em)/2)] xl:w-[260px] "
+    classnames += "w-full md:w-[calc((100vw-280px-7em)/2)] xl:w-65 "
     if(sidebarClosed) classnames += "md:w-[calc(50vw-62px-1em)]"
     return classnames;
   }
@@ -138,7 +138,7 @@ function CollectionsBox() {
   return (
     <div>
       <div className={getLayoutClassnames()}>
-        <div className="p-4 border-b border-gray-200 h-[120px]">
+        <div className="p-4 border-b border-gray-200 h-30">
           <h2 className="text-lg font-semibold mb-3 flex items-center justify-between text-black">
             <span className="flex items-center">
               <Database className="w-5 h-5 mr-2 text-gray-800" />
@@ -250,7 +250,7 @@ const SearchBox = ({searchTerm, setSearchTerm, onClear}) => {
       <input
         type="text"
         placeholder="Search collections..."
-        className={`w-full px-[16px] py-2 border border-gray-400 rounded-lg text-sm text-black transition-all duration-150 ease-in-out ${searchTerm ? "pl-[36px]" : ""}`}
+        className={`w-full px-4 py-2 border border-gray-400 rounded-lg text-sm text-black transition-all duration-150 ease-in-out ${searchTerm ? "pl-9" : ""}`}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />

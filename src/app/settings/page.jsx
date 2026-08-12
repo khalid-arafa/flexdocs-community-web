@@ -14,7 +14,7 @@ export default function SettingsPage() {
 
   return (
     <LayoutWrapper sidebar={<AdminSidebarContent />}>
-      <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-[1000px]">
+      <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-250">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Settings</h1>
         <Tabs tabs={tabs} />
       </div>

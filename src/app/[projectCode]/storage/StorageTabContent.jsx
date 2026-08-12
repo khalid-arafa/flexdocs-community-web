@@ -471,7 +471,7 @@ export default function StorageTabContent() {
               <div className="flex-1 min-w-0">Name</div>
               <div className="min-w-0 mx-4">Size</div>
               <div className="min-w-0 mx-4">Created At</div>
-              <div className="shrink-0 w-[42px] text-center">Options</div>
+              <div className="shrink-0 w-10.5 text-center">Options</div>
             </div>
 
             {/* Cards */}
@@ -534,7 +534,7 @@ export default function StorageTabContent() {
                 </div>
 
                 {/* Mobile-only details */}
-                <div className="md:hidden mt-3 space-y-2 text-sm pl-[52px] text-black">
+                <div className="md:hidden mt-3 space-y-2 text-sm pl-13 text-black">
                   {item.size && (
                     <div className="text-black">Size: {formatBytes(item.size)}</div>
                   )}

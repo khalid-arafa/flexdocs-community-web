@@ -91,7 +91,7 @@ function AddEditBucket({
           <Button
             variant="cancel"
             onClick={(e) => onDone()}
-            className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer max-w-[120px]"
+            className="px-4 py-2 text-black rounded-xl hover:bg-gray-200 transition cursor-pointer max-w-30"
           >
             Cancel
           </Button>
@@ -100,7 +100,7 @@ function AddEditBucket({
               await onSubmit();
               onDone();
             }}
-            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer max-w-[120px]"
+            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer max-w-30"
           >
             Submit
           </Button>

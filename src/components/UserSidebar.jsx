@@ -17,8 +17,8 @@ function UserSidebar({ children }) {
   const { confirm } = useDialogs();
 
   const getClassnames = () => {
-    let classnames = "bg-[#0F172A] fixed bottom-0 top-0 text-white z-10 flex flex-col transition-all duration-300 border-r border-[#1e293b] border-t-[3px] border-t-brand ";
-    classnames += sidebarClosed ? "-left-[62px] md:left-0 w-[62px]" : "w-[300px]";
+    let classnames = "bg-[#0F172A] fixed bottom-0 top-0 text-white z-10 flex flex-col transition-all duration-300 border-r border-[#1e293b] border-t-3 border-t-brand ";
+    classnames += sidebarClosed ? "-left-15.5 md:left-0 w-15.5" : "w-75";
     return classnames;
   }
 
@@ -32,14 +32,14 @@ function UserSidebar({ children }) {
           onClick={() => {            
             toggleSidebar();
           }}
-          className={`absolute top-0 z-10 cursor-pointer ${!sidebarClosed ? "right-0" : "-right-[62px] md:right-0"} w-[62px] h-[62px] flex justify-center items-center`}
+          className={`absolute top-0 z-10 cursor-pointer ${!sidebarClosed ? "right-0" : "-right-15.5 md:right-0"} w-15.5 h-15.5 flex justify-center items-center`}
         >
           <Menu size={29} className={`${!sidebarClosed ? "text-white" : "text-[#0F172A] md:text-white"}`} />
         </button>
       </div>
 
       {!sidebarClosed && <div className="flex flex-col mt-12 md:mt-24">
-        <div className="flex w-[200px] h-[70px] mx-auto mb-8">
+        <div className="flex w-50 h-17.5 mx-auto mb-8">
           <button 
             className="relative hover:scale-110 transition-all ease-in-out overflow-auto cursor-pointer" 
             onClick={() => {
@@ -50,7 +50,7 @@ function UserSidebar({ children }) {
             <Image src={"/images/flexdocs-logo.png"} alt="Logo" className="overflow-auto" width={200} height={70} />
           </button>
         </div>
-        <p className="text-lg leading-relaxed text-center text-[#ddd]">
+        <p className="text-lg/relaxed text-center text-[#ddd]">
           Build, manage, and scale databases effortlessly.
         </p>
       </div>}

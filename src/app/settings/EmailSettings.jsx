@@ -286,7 +286,7 @@ export default function EmailSettings() {
             <Button
               type="submit"
               isLoading={saving}
-              className="flex items-center justify-center gap-2 max-w-[200px]"
+              className="flex items-center justify-center gap-2 max-w-50"
             >
               <Check size={20} color="white" />
               Save Email Settings
@@ -320,7 +320,7 @@ export default function EmailSettings() {
             onClick={handleTest}
             isLoading={testing}
             variant="secondary"
-            className="flex items-center justify-center gap-2 max-w-[200px]"
+            className="flex items-center justify-center gap-2 max-w-50"
           >
             <Send size={18} color="white" />
             Send test email

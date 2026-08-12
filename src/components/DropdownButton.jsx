@@ -269,7 +269,7 @@ const DropdownButton = ({ button, choices }) => {
                 }}
               >
                 {choice.icon && (
-                  <span className="mr-2 flex-shrink-0">{choice.icon}</span>
+                  <span className="mr-2 shrink-0">{choice.icon}</span>
                 )}
                 {choice.label && (
                   <span className="truncate">{choice.label}</span>
