@@ -1,3 +1,6 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 /** @type {import('next').NextConfig} */
 
 // Origin of the API the dashboard talks to (REST + websockets). Allowed in CSP
@@ -69,6 +72,12 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const nextConfig = {
+  // This app is checked out inside a larger workspace that has its own
+  // package-lock.json, so Next's "nearest lockfile" heuristic picks that outer
+  // directory as the root and traces files from outside the dashboard. Pin the
+  // root to this app.
+  outputFileTracingRoot: path.dirname(fileURLToPath(import.meta.url)),
+
   // No next/image component points at picsum — the avatar fallbacks are plain
   // <img> and don't consult remotePatterns — so the placeholder-era allowance
   // is dead config. Removed.
