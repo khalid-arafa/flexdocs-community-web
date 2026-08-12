@@ -21,7 +21,10 @@ import {
   deleteStorageBucket,
   deleteStorageFile,
   getBucketContent,
+  getSignedDownloadUrl,
 } from "@/utils/api";
+import { API_URL } from "@/constants";
+import { usesCookieAuth } from "@/utils/authMode";
 import { formatDate } from "@/utils/datetime";
 import LoadMorePagination from "@/components/LoadMorePagination";
 import { formatBytes, getFileUrl, isImageFile } from "@/utils/files";
@@ -185,10 +188,15 @@ export default function StorageTabContent() {
   const getDownloadableLink = ({ file, withToken = false, size }) =>
     getFileUrl({
       file,
-      token:
-        withToken || !activeProject?.isPublic
-          ? activeProject?.projectToken
-          : undefined,
+      // Cookie-auth (HTTPS): the admin session cookie rides the request and the
+      // admin bypass on the API serves any file, so no token belongs in the URL
+      // (it would only leak into history/logs). Bearer (dev/HTTP): keep the
+      // project token for private projects as before.
+      token: usesCookieAuth()
+        ? undefined
+        : withToken || !activeProject?.isPublic
+        ? activeProject?.projectToken
+        : undefined,
       size,
     });
 
@@ -237,7 +245,27 @@ export default function StorageTabContent() {
         label: "Copy Downloadable Link",
         icon: <Copy size={18} color="black" />,
         onClick: async () => {
-          const ok = await copyToClipboard(getDownloadableLink({ file: item }));
+          let link;
+          // In cookie-auth mode a private file has no URL token, so a bare link
+          // only works in the admin's own (cookie-bearing) browser. Mint a
+          // time-limited signed link instead — shareable without exposing a
+          // reusable token. Falls back to the bare link on any failure.
+          if (usesCookieAuth() && item.isPublic === false) {
+            try {
+              const res = await getSignedDownloadUrl({
+                projectCode: activeProject.code,
+                fileId: item._id,
+              });
+              if (res.ok) {
+                const body = await res.json();
+                if (body?.url) link = `${API_URL}/${body.url}`;
+              }
+            } catch {
+              /* fall through to the bare link */
+            }
+          }
+          if (!link) link = getDownloadableLink({ file: item });
+          const ok = await copyToClipboard(link);
           toast(ok ? "Link copied to clipboard" : "Failed to copy the link");
         },
       });

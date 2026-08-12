@@ -1,24 +1,21 @@
 import { API_URL } from "@/constants";
 import { io } from "socket.io-client";
-import Cookies from "js-cookie";
 
 let sockets = {};
-
-function getUserToken() {
-  try {
-    const user = JSON.parse(Cookies.get("user") || "{}");
-    return user.token || null;
-  } catch {
-    return null;
-  }
-}
 
 export const getSocket = (projectToken) => {
   let socket = sockets[projectToken] || null;
   if (!socket) {
     if (projectToken) {
       sockets[projectToken] = io(API_URL, {
-        auth: { projectToken, token: getUserToken() },
+        // Authenticate the socket with the per-project token only. The admin
+        // session token used to be passed here as `token`, but the server reads
+        // it under `userToken` — so it was never actually consumed and realtime
+        // has always authenticated off the project token alone. In cookie-auth
+        // mode the admin JWT isn't in JS to send anyway; withCredentials lets
+        // the httpOnly session cookie ride the handshake for any future use.
+        auth: { projectToken },
+        withCredentials: true,
         reconnection: true,
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,

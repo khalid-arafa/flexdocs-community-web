@@ -17,28 +17,34 @@ function decodeJwtPayload(token) {
   }
 }
 
-function isTokenValid(token) {
-  if (typeof token !== "string" || token.length === 0) return false;
-  const payload = decodeJwtPayload(token);
-  if (!payload || typeof payload.exp !== "number") return false;
+function isSessionValid(exp) {
+  if (typeof exp !== "number") return false;
   // `exp` is seconds since epoch; reject anything already expired.
-  return payload.exp * 1000 > Date.now();
+  return exp * 1000 > Date.now();
+}
+
+// The `user` cookie has two shapes depending on how the dashboard authenticates
+// (see utils/auth.js). In Bearer/dev mode it carries the JWT, so read `exp` from
+// the token. In cookie-auth/HTTPS mode the token lives only in an httpOnly
+// cookie on the API's origin — invisible here — so the dashboard stores the
+// token's `exp` alongside the profile instead. Support both.
+function sessionExpFromCookie(userCookieValue) {
+  try {
+    const parsed = JSON.parse(userCookieValue);
+    if (parsed?.token) return decodeJwtPayload(parsed.token)?.exp ?? null;
+    return typeof parsed?.exp === "number" ? parsed.exp : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function middleware(request) {
   const path = request.nextUrl.pathname;
 
-  let token = null;
   const userCookie = request.cookies.get("user")?.value;
-  if (userCookie) {
-    try {
-      token = JSON.parse(userCookie)?.token ?? null;
-    } catch {
-      token = null;
-    }
-  }
+  const exp = userCookie ? sessionExpFromCookie(userCookie) : null;
 
-  const authenticated = isTokenValid(token);
+  const authenticated = isSessionValid(exp);
 
   // Not (or no longer) authenticated → straight to the login page. Clearing the
   // cookie stops a stale/expired token from flashing the dashboard again.

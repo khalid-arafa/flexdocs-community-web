@@ -6,6 +6,7 @@ import { useProjectsContext } from "@/context/ProjectsContext";
 import { getSocket } from "@/utils/socket";
 import { useStorageContext } from "@/context/StorageContext";
 import { API_URL } from "@/constants";
+import { usesCookieAuth } from "@/utils/authMode";
 import { copyToClipboard } from "@/utils/clipboard";
 
 export default function FileUploader() {
@@ -191,9 +192,12 @@ export default function FileUploader() {
   function downloadableLink(fileObj) {
     if (!fileObj.url) return null;
     const url = `${API_URL}/${String(fileObj.url).replace(/^\/+/, "")}`;
-    return activeProject?.isPublic
-      ? url
-      : `${url}?token=${encodeURIComponent(activeProject?.projectToken || "")}`;
+    // Cookie-auth (HTTPS): the admin session cookie authorises the request, so
+    // no token belongs in the URL (freshly uploaded files are public by default
+    // anyway). Public project: the bare URL is already open. Only the legacy
+    // Bearer/dev path on a private project still appends the project token.
+    if (usesCookieAuth() || activeProject?.isPublic) return url;
+    return `${url}?token=${encodeURIComponent(activeProject?.projectToken || "")}`;
   }
 
   async function copyLink(fileObj) {

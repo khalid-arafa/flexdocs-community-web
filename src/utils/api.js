@@ -1,6 +1,7 @@
 import { API_URL } from "@/constants";
 import Cookies from "js-cookie";
 import { logout, logoutAndRedirect } from "./auth";
+import { usesCookieAuth } from "./authMode";
 
 const UNAUTHORIZED_STATUS = new Set([401, 403]);
 
@@ -21,11 +22,22 @@ function getToken() {
 }
 
 function getAuthHeaders(extraHeaders = {}) {
-  const token = getToken();
+  // Cookie-auth (HTTPS): the httpOnly session cookie rides credentials:"include"
+  // and JS holds no token, so no Authorization header. Bearer (dev/HTTP): send
+  // the token kept in the `user` cookie.
+  const token = usesCookieAuth() ? null : getToken();
   return {
     ...extraHeaders,
     ...(token ? { authorization: `Bearer ${token}` } : {}),
   };
+}
+
+// Double-submit CSRF header for unsafe methods. The API only enforces it once a
+// request carries an auth cookie (cookie-auth mode); in Bearer mode it is
+// ignored, so sending it whenever we have the value is harmless.
+function getCsrfHeader() {
+  const csrf = Cookies.get("csrf");
+  return csrf ? { "x-csrf-token": csrf } : {};
 }
 
 async function withAuthHandling(result) {
@@ -46,6 +58,7 @@ async function get(url) {
   const result = await fetch(url, {
     method: "GET",
     headers: getAuthHeaders(),
+    credentials: "include",
   });
   return withAuthHandling(result);
 }
@@ -54,7 +67,9 @@ async function del({ url, body }) {
     method: "DELETE",
     headers: getAuthHeaders({
       ...(body && { "Content-Type": "application/json" }),
+      ...getCsrfHeader(),
     }),
+    credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
   return withAuthHandling(result);
@@ -64,7 +79,9 @@ async function post({ url, body }) {
     method: "POST",
     headers: getAuthHeaders({
       "Content-Type": "application/json",
+      ...getCsrfHeader(),
     }),
+    credentials: "include",
     body: JSON.stringify(body),
   });
   return withAuthHandling(result);
@@ -74,7 +91,9 @@ async function put({ url, body }) {
     method: "PUT",
     headers: getAuthHeaders({
       "Content-Type": "application/json",
+      ...getCsrfHeader(),
     }),
+    credentials: "include",
     body: JSON.stringify(body),
   });
   return withAuthHandling(result);
@@ -313,6 +332,17 @@ export const deleteStorageFile = async ({ projectCode, fileId }) => {
   const result = await del({
     url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/storage/files/${encodeURIComponent(fileId)}`,
   });
+  return result;
+};
+
+// Mint a short-lived signed download URL for a private file. Used for shareable
+// links so the copied URL carries a time-limited signature instead of a
+// reusable project/user token (which would otherwise leak into history/logs).
+export const getSignedDownloadUrl = async ({ projectCode, fileId, size }) => {
+  const qs = size ? `?size=${encodeURIComponent(size)}` : "";
+  const result = await get(
+    `${API_URL}/projects/${encodeURIComponent(projectCode)}/storage/files/${encodeURIComponent(fileId)}/signed-url${qs}`
+  );
   return result;
 };
 

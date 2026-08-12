@@ -4,6 +4,7 @@ const cookieStore = {};
 vi.mock("js-cookie", () => ({
   default: {
     set: vi.fn((key, value) => { cookieStore[key] = value; }),
+    get: vi.fn((key) => cookieStore[key]),
     remove: vi.fn((key) => { delete cookieStore[key]; }),
   },
 }));
@@ -21,6 +22,9 @@ function mockFetchOnce(ok, body) {
 beforeEach(() => {
   vi.clearAllMocks();
   for (const key of Object.keys(cookieStore)) delete cookieStore[key];
+  // Default fetch so logout()'s best-effort /logout call never throws; the
+  // per-test mockFetchOnce overrides it where the response matters.
+  global.fetch = vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({}) });
 });
 
 afterEach(() => {
@@ -86,6 +90,50 @@ describe("logout", () => {
   it("removes the user cookie", () => {
     logout();
     expect(Cookies.remove).toHaveBeenCalledWith("user", { sameSite: "Lax" });
+  });
+
+  it("also clears the csrf cookie", () => {
+    logout();
+    expect(Cookies.remove).toHaveBeenCalledWith("csrf", { sameSite: "Lax" });
+  });
+
+  it("posts to /logout with the csrf header to tear down the httpOnly session", () => {
+    cookieStore.csrf = "csrf123";
+    logout();
+    const call = global.fetch.mock.calls.find(([u]) => String(u).endsWith("/logout"));
+    expect(call).toBeTruthy();
+    const [, opts] = call;
+    expect(opts.method).toBe("POST");
+    expect(opts.credentials).toBe("include");
+    expect(opts.headers["x-csrf-token"]).toBe("csrf123");
+  });
+});
+
+describe("login (cookie-auth / HTTPS mode)", () => {
+  beforeEach(() => {
+    // Simulate an https page so usesCookieAuth() takes the cookie branch.
+    vi.stubGlobal("window", { location: { protocol: "https:", pathname: "/" } });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("persists a TOKENLESS profile (+exp) and the csrf token — never the JWT", async () => {
+    // base64url JWT payload carrying an exp claim.
+    const payload = btoa(JSON.stringify({ exp: 1893456000 }))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+    const jwt = `h.${payload}.s`;
+    mockFetchOnce(true, { uid: "u1", token: jwt, csrfToken: "c1", name: "Ada" });
+
+    await login("a@b.com", "pw");
+
+    const userCall = Cookies.set.mock.calls.find(([k]) => k === "user");
+    const stored = JSON.parse(userCall[1]);
+    expect(stored.token).toBeUndefined(); // the JWT is never written to JS storage
+    expect(stored.uid).toBe("u1");
+    expect(stored.name).toBe("Ada");
+    expect(stored.exp).toBe(1893456000); // exp kept for the edge middleware gate
+    expect(Cookies.set).toHaveBeenCalledWith("csrf", "c1", expect.anything());
   });
 });
 
