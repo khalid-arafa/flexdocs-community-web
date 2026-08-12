@@ -4,11 +4,11 @@ function Button({children, onClick, className = "", type = "button", variant = "
   const getClasses = () => {
     let classes = "w-full cursor-pointer text-white py-3 px-4 rounded-xl font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ";    
     if(variant === "primary") {
-      classes += "bg-gradient-to-r from-[#192542] to-[#213055] hover:to-purple-700 focus:ring-indigo-500 ";
+      classes += "bg-linear-to-r from-[#192542] to-[#213055] hover:to-purple-700 focus:ring-indigo-500 ";
     } else if(variant === "cancel") {
-      classes += "bg-gradient-to-r from-red-500 to-red-700 hover:to-red-600 focus:ring-red-500 ";
+      classes += "bg-linear-to-r from-red-500 to-red-700 hover:to-red-600 focus:ring-red-500 ";
     } else if(variant === "secondary") {
-      classes += "bg-gradient-to-r from-gray-500 to-gray-600 hover:to-gray-700 focus:ring-gray-500 ";
+      classes += "bg-linear-to-r from-gray-500 to-gray-600 hover:to-gray-700 focus:ring-gray-500 ";
     }    
     if(className) classes += className;    
     return classes;

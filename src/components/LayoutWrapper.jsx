@@ -14,7 +14,7 @@ function LayoutWrapper({sidebar, children}) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50">
+    <div className="min-h-screen bg-linear-to-br from-gray-100 to-blue-50">
       <div className="mx-auto flex flex-col lg:flex-row">
         {sidebar}
           <div className={getClassnames()}>

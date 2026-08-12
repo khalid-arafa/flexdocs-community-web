@@ -222,7 +222,7 @@ export default function NewProject() {
                 <Button
                   variant="secondary"
                   onClick={handleCancel}
-                  className="!w-full sm:!w-auto"
+                  className="w-full! sm:w-auto!"
                 >
                   Cancel
                 </Button>
@@ -231,7 +231,7 @@ export default function NewProject() {
                   variant="primary"
                   isLoading={submitting}
                   onClick={() => {}}
-                  className="!w-full sm:!w-auto"
+                  className="w-full! sm:w-auto!"
                 >
                   Save Project
                 </Button>
