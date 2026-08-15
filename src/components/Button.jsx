@@ -1,6 +1,6 @@
 import React from 'react'
 
-function Button({children, onClick, className = "", type = "button", variant = "primary", isLoading = false, ref}) {
+function Button({children, onClick, className = "", type = "button", variant = "primary", isLoading = false, disabled = false, ref}) {
   const getClasses = () => {
     let classes = "w-full cursor-pointer text-white py-3 px-4 rounded-xl font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ";    
     if(variant === "primary") {
@@ -19,8 +19,11 @@ function Button({children, onClick, className = "", type = "button", variant = "
       ref={ref}
       type={type}
       className={getClasses()}
-      disabled={isLoading}
-      onClick={(e) => onClick(e)}
+      disabled={isLoading || disabled}
+      // `onClick` is optional: a type="submit" Button is driven by the form's
+      // own onSubmit and passes no handler, so calling it unconditionally threw
+      // on every such click.
+      onClick={(e) => onClick?.(e)}
     >
       {isLoading ? (
         <span className="flex items-center justify-center">

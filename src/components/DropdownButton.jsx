@@ -155,6 +155,20 @@ const DropdownButton = ({ button, choices }) => {
     return maxWidth;
   };
 
+  // Latest-value refs for the window/document listeners below. Reading state
+  // through them lets those listeners be registered ONCE with stable handler
+  // references: with `isVisible`/`isRendered` in the effect's deps, both
+  // listeners were torn down and re-added on every open and close.
+  const isVisibleRef = useRef(isVisible);
+  const isRenderedRef = useRef(isRendered);
+  const calculatePositionRef = useRef(calculatePosition);
+
+  useEffect(() => {
+    isVisibleRef.current = isVisible;
+    isRenderedRef.current = isRendered;
+    calculatePositionRef.current = calculatePosition;
+  });
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -163,7 +177,7 @@ const DropdownButton = ({ button, choices }) => {
         !dropdownRef.current.contains(event.target) &&
         buttonRef.current &&
         !buttonRef.current.contains(event.target) &&
-        isVisible
+        isVisibleRef.current
       ) {
         // First make it invisible with animation
         setIsVisible(false);
@@ -174,18 +188,23 @@ const DropdownButton = ({ button, choices }) => {
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    window.addEventListener("resize", () => {
-      if (isRendered) {
-        calculatePosition();
+    // One named handler, added and removed by the same reference — the old
+    // code added an anonymous function and removed `calculatePosition`, so no
+    // resize listener was ever removed.
+    const handleResize = () => {
+      if (isRenderedRef.current) {
+        calculatePositionRef.current();
       }
-    });
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("resize", handleResize);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("resize", calculatePosition);
+      window.removeEventListener("resize", handleResize);
     };
-  }, [isVisible, isRendered]);
+  }, []);
 
   // Get animation and base classes for the dropdown menu
   const getMenuClasses = () => {

@@ -90,7 +90,10 @@ function GeneralSettings() {
           setProjects((prev) =>
             prev.filter((i) => i.code !== activeProject.code)
           );
-          disconnectSocket(activeProject.code);
+          // Keyed by the project TOKEN, which is what getSocket stores sockets
+          // under — passing the project code here was a silent no-op that left
+          // the deleted project's socket connected for the rest of the session.
+          disconnectSocket(activeProject.projectToken);
           router.push("/projects");
           setActiveProject(null);
         } else {

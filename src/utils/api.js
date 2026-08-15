@@ -349,15 +349,41 @@ export const getSignedDownloadUrl = async ({ projectCode, fileId, size }) => {
 //
 //
 // database
+
+// Escape a user-typed term so Mongo matches it literally instead of reading it
+// as a pattern — otherwise typing "a." or "(" either matches the wrong
+// collections or is rejected outright by the API's regex safety checks.
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// The API rejects a $regex longer than 250 characters (sanitize_query
+// middleware). Escaping can at most double a term's length, so bounding the raw
+// term at 100 keeps the escaped pattern comfortably under that ceiling.
+const MAX_COLLECTION_SEARCH_LENGTH = 100;
+
+// POST /db/collections passes `where` straight to MongoDB's listCollections, so
+// a name regex filters server-side — across every collection, not just the
+// pages already fetched — and the returned totalCount reflects the filter, which
+// is what keeps "Load More" correct while searching.
+export const buildCollectionSearchFilter = (search) => {
+  const term = (search || "").trim().slice(0, MAX_COLLECTION_SEARCH_LENGTH);
+  if (!term) return {};
+  return { name: { $regex: escapeRegExp(term), $options: "i" } };
+};
+
 export const getDatabaseCollections = async ({
   projectCode,
-  where = {},
+  where,
+  search,
   page = 1,
   limit = 40,
 }) => {
   const result = await post({
     url: `${API_URL}/projects/${encodeURIComponent(projectCode)}/db/collections`,
-    body: { where, page, limit },
+    body: {
+      where: where || buildCollectionSearchFilter(search),
+      page,
+      limit,
+    },
   });
   return result;
 };

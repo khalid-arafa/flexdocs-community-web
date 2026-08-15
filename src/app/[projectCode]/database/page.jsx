@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import DatabseTabContent from "./DatabaseTabContent";
 import { loadDbRules, saveDbRules } from "@/utils/api";
 import { useProjectsContext } from "@/context/ProjectsContext";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 
 export default function page() {
   const [rules, setRules] = useState();
@@ -71,7 +71,6 @@ export default function page() {
   return (
     <div className="w-full max-w-6xl mx-auto p-2">
       <Tabs tabs={tabs} />
-      <ToastContainer />
     </div>
   );
 }

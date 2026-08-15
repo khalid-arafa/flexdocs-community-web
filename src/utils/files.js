@@ -24,17 +24,35 @@ export function isImageFile(file) {
  *
  * `size` requests a resized copy ("small" | "medium" | "large"), which the API
  * only honours for images.
+ *
+ * NO AUTH MATERIAL GOES IN THIS URL. It used to take a `token` and put the
+ * long-lived PROJECT token in the query string, which leaked it into browser
+ * history, the Referer of every outbound link and every proxy/access log in
+ * between — and it was a reusable, project-wide credential, not a grant for the
+ * one file. Public files need no credential at all; private ones are reached
+ * through a short-lived, file-scoped SIGNED url the API mints (see
+ * `getSignedDownloadUrl` in utils/api and `toAbsoluteApiUrl` below).
  */
-export function getFileUrl({ file, token, size }) {
+export function getFileUrl({ file, size, projectCode }) {
   const filename = encodeURIComponent(`${file.name}.${file.ext}`);
   const base = `${API_URL}/projects/${encodeURIComponent(
-    file.projectCode
-  )}/storage/${file._id}/${filename}`;
+    projectCode || file.projectCode
+  )}/storage/${encodeURIComponent(String(file._id))}/${filename}`;
   const params = new URLSearchParams();
-  if (token) params.set("token", token);
   if (size) params.set("size", size);
   const query = params.toString();
   return query ? `${base}?${query}` : base;
+}
+
+/**
+ * The signed-url endpoint answers with a path relative to the API root
+ * ("projects/<code>/storage/<id>/<name>?expires=…&signature=…"); make it
+ * absolute without doubling or dropping the separating slash.
+ */
+export function toAbsoluteApiUrl(relativePath) {
+  if (!relativePath) return null;
+  if (/^https?:\/\//i.test(relativePath)) return relativePath;
+  return `${API_URL}/${String(relativePath).replace(/^\/+/, "")}`;
 }
 
 export function formatBytes(bytes, decimals = 0) {

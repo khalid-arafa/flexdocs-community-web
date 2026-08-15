@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { X, CheckCircle, AlertCircle, File, Loader, Copy, Check } from "lucide-react";
 import { useProjectsContext } from "@/context/ProjectsContext";
-import { getSocket } from "@/utils/socket";
+import { getSocket, holdSocket, releaseSocket } from "@/utils/socket";
 import { useStorageContext } from "@/context/StorageContext";
 import { API_URL } from "@/constants";
-import { usesCookieAuth } from "@/utils/authMode";
+import { getSignedDownloadUrl } from "@/utils/api";
+import { toAbsoluteApiUrl } from "@/utils/files";
 import { copyToClipboard } from "@/utils/clipboard";
 
 export default function FileUploader() {
@@ -17,6 +18,11 @@ export default function FileUploader() {
   // uploads by name, so a second concurrent upload of the same name would
   // clobber the first's server-side state — refused below.
   const inFlightNamesRef = useRef(new Set());
+  // Every upload that has attached listeners to the shared socket and has not
+  // yet reached complete/error, keyed by upload key. Complete/error removes its
+  // own entry; whatever is left at unmount is still in flight and is cancelled
+  // there — otherwise its four listeners stay on the shared socket forever.
+  const activeUploadsRef = useRef(new Map());
 
   const { activeProject } = useProjectsContext();
 
@@ -74,14 +80,23 @@ export default function FileUploader() {
       }
 
       inFlightNamesRef.current.add(fileObj.file.name);
+      const projectToken = activeProject?.projectToken;
+      // Pin the shared socket for the life of this upload so switching project
+      // can't disconnect it mid-transfer.
+      holdSocket(projectToken);
       const releaseInFlight = () =>
         inFlightNamesRef.current.delete(fileObj.file.name);
 
+      // Idempotent: complete/error and the unmount cancellation may both reach
+      // it, and only the first release should count against the socket hold.
       const cleanupListeners = () => {
         socket.off("upload:ready", handleReady);
         socket.off("upload:progress", handleProgress);
         socket.off("upload:complete", handleComplete);
         socket.off("upload:error", handleError);
+        if (activeUploadsRef.current.delete(uploadKey)) {
+          releaseSocket(projectToken);
+        }
       };
 
       const chunkSize = 64 * 1024;
@@ -172,6 +187,11 @@ export default function FileUploader() {
       socket.on("upload:progress", handleProgress);
       socket.on("upload:complete", handleComplete);
       socket.on("upload:error", handleError);
+      activeUploadsRef.current.set(uploadKey, {
+        socket,
+        name: fileObj.file.name,
+        cleanupListeners,
+      });
 
       // Start upload process
       socket.emit("upload:start", {
@@ -186,22 +206,50 @@ export default function FileUploader() {
 
   /**
    * `upload:complete` carries the file's path relative to the API root, with
-   * the name segment already percent-encoded. Private projects need the
-   * project token for the link to resolve.
+   * the name segment already percent-encoded, but no file id of its own. The
+   * id is the fourth segment: "projects/<code>/storage/<id>/<name>.<ext>".
    */
-  function downloadableLink(fileObj) {
+  function fileIdFromUrl(url) {
+    const parts = String(url || "")
+      .replace(/^\/+/, "")
+      .split("/");
+    return parts[0] === "projects" && parts[2] === "storage" ? parts[3] : null;
+  }
+
+  /**
+   * A copied link has to work where it is pasted, and it must not carry a
+   * credential. The project token used to be appended here, which leaked a
+   * reusable project-wide credential into clipboards, chat logs and browser
+   * history; the admin session cookie is no better, since it only authorises
+   * the admin's own browser and produces a link that 403s for anyone else.
+   * Public projects need nothing; private files get a short-lived, file-scoped
+   * signed URL instead.
+   */
+  async function downloadableLink(fileObj) {
     if (!fileObj.url) return null;
     const url = `${API_URL}/${String(fileObj.url).replace(/^\/+/, "")}`;
-    // Cookie-auth (HTTPS): the admin session cookie authorises the request, so
-    // no token belongs in the URL (freshly uploaded files are public by default
-    // anyway). Public project: the bare URL is already open. Only the legacy
-    // Bearer/dev path on a private project still appends the project token.
-    if (usesCookieAuth() || activeProject?.isPublic) return url;
-    return `${url}?token=${encodeURIComponent(activeProject?.projectToken || "")}`;
+    if (activeProject?.isPublic) return url;
+
+    const fileId = fileIdFromUrl(fileObj.url);
+    if (!fileId || !activeProject?.code) return url;
+    try {
+      const result = await getSignedDownloadUrl({
+        projectCode: activeProject.code,
+        fileId,
+      });
+      const signed = toAbsoluteApiUrl(result?.data?.url || result?.url);
+      if (signed) return signed;
+    } catch {
+      /* fall through to the unsigned URL below */
+    }
+    // Minting failed: hand back the bare URL rather than a token-bearing one.
+    // It resolves for public files and for the admin's own cookie session, and
+    // fails closed for everyone else — the correct direction to fail in.
+    return url;
   }
 
   async function copyLink(fileObj) {
-    const link = downloadableLink(fileObj);
+    const link = await downloadableLink(fileObj);
     if (!link) return;
     const ok = await copyToClipboard(link);
     if (!ok) return;
@@ -234,12 +282,32 @@ export default function FileUploader() {
     }
   }, [uploadFiles, uploadFile]);
 
+  // Unmount is a real teardown, not a hide: FileUploader lives in the project
+  // layout, so it only goes away when the project screen itself does (project
+  // switch, logout, leaving /[projectCode]). Nothing is left to render progress
+  // or hand back the uploaded URL, so an upload still in flight is cancelled
+  // rather than left running detached — and `upload:cancel` makes the server
+  // discard its partial file instead of holding it until the socket dies.
+  // Hiding the panel (showUploader -> false) deliberately does NOT do this:
+  // uploads keep running and the panel can be reopened.
   useEffect(() => {
     return () => {
       setShowUploader(false);
+      cancelInFlightUploads();
       cleanUp();
     };
   }, []);
+
+  const cancelInFlightUploads = () => {
+    activeUploadsRef.current.forEach(({ socket, name, cleanupListeners }) => {
+      if (socket.connected) socket.emit("upload:cancel", name);
+      // Removes this upload's four listeners from the shared socket and
+      // releases its hold; it also deletes its own entry from the map.
+      cleanupListeners();
+    });
+    activeUploadsRef.current.clear();
+    inFlightNamesRef.current.clear();
+  };
 
   useEffect(() => {
     if (!showUploader) cleanUp();

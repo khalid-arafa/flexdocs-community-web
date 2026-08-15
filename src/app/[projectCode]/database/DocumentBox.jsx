@@ -5,8 +5,8 @@ import { useProjectsContext } from "@/context/ProjectsContext";
 import useCooldown from "@/hooks/useCooldown";
 import { createDocument, deleteDocument, saveDocument } from "@/utils/api";
 import { toast } from "react-toastify";
-import { useEffect, useState } from "react";
-import { Loader, MoreVerticalIcon, X } from "lucide-react";
+import { useMemo } from "react";
+import { MoreVerticalIcon, X } from "lucide-react";
 import DropdownButton from "@/components/DropdownButton";
 import { useDialogs } from "@/context/DialogsContext";
 import { useDatabaseContext } from "@/context/DatabaseContext";
@@ -21,18 +21,18 @@ function DocumentBox() {
 
   const { confirm } = useDialogs();
 
-  const [isLoading, setIsLoading] = useState(false);
   const [_, trigger] = useCooldown(3000);
 
-  useEffect(() => {
-    const handleDocument = async () => {
-      setIsLoading(true);
-      await new Promise((res) => setTimeout(() => res(), 150));
-      const data = { ...selectedDocument };
-      delete data._id;
-      setIsLoading(false);
-    };
-    handleDocument();
+  // The editor's source text. This used to be handed to JsonEditor as a
+  // function, and the selection change was announced by flipping a fake 150ms
+  // "loading" flag purely so the editor would unmount and re-read it. JsonEditor
+  // now tracks its `jsonData` prop, so the plain derived string is enough.
+  const documentJson = useMemo(() => {
+    if (!selectedDocument) return "";
+    const data = { ...selectedDocument };
+    delete data._id;
+    if (Object.keys(data).length == 0) return "{\n\t\n}";
+    return JSON.stringify(data, null, 2);
   }, [selectedDocument]);
 
   const onSave = async (data) => {
@@ -49,6 +49,12 @@ function DocumentBox() {
       if (result.ok && body._id) {
         toast("Document was created successfully", { type: "success" });
         setSelectedDocument({ ...body, ...JSON.parse(data) });
+      } else {
+        // Without this branch a rejected create looked exactly like a
+        // successful one: nothing happened at all.
+        toast(body?.message || "Document could not be created", {
+          type: "error",
+        });
       }
     } else {
       const result = await saveDocument({
@@ -110,6 +116,11 @@ function DocumentBox() {
                     if (result.ok) {
                       toast("Document was deleted successfully!");
                       setSelectedDocument(null);
+                    } else {
+                      const body = await result.json().catch(() => null);
+                      toast(body?.message || "Document could not be deleted", {
+                        type: "error",
+                      });
                     }
                   },
                 },
@@ -118,26 +129,16 @@ function DocumentBox() {
           )}
         </div>
         <div className="flex flex-1 overflow-y-auto p-4">
-          {isLoading && (
-            <div className="flex justify-center items-center p-8 w-full">
-              <Loader className="w-6 h-6 animate-spin text-gray-800" />
-            </div>
-          )}
-          {!isLoading && !selectedDocument && (
+          {!selectedDocument && (
             <div className="flex justify-center items-center h-64 text-gray-400 text-sm w-full">
               <p>Select a document to view details</p>
             </div>
           )}
-          {!isLoading && selectedDocument && (
+          {selectedDocument && (
             <div className="w-full">
               <JsonEditor
                 height={"500px"}
-                jsonData={() => {
-                  const data = { ...selectedDocument };
-                  delete data._id;
-                  if (Object.keys(data).length == 0) return "{\n\t\n}";
-                  return JSON.stringify(data, null, 2);
-                }}
+                jsonData={documentJson}
                 onSave={onSave}
               />
             </div>

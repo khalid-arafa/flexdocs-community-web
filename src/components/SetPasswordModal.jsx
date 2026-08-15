@@ -1,6 +1,18 @@
 import { updateAccountData } from "@/utils/api";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Button from "./Button";
+
+// One rule per field, shared by the on-blur check and the submit gate — so the
+// two can never disagree about what "valid" means. Returns "" for valid.
+const VALIDATORS = {
+  password: (value) => {
+    if (!value) return "Password is required!";
+    if (value.length < 8) return "Password should be at least 8 characters!";
+    return "";
+  },
+};
+
+const FIELDS = ["password"];
 
 function SetPasswordModal({
   title = "Setting Password",
@@ -9,37 +21,71 @@ function SetPasswordModal({
   toast,
   onDone,
 }) {
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [values, setValues] = useState({ password: "" });
+  const [errors, setErrors] = useState({ password: "" });
+  const [formError, setFormError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
+  const refs = { password: useRef(null) };
+
+  const handleChange = (field) => (e) => {
+    const value = e.target.value;
+    setValues((prev) => ({ ...prev, [field]: value }));
+    // A visible error disappears as soon as the field becomes valid again,
+    // without waiting for another blur.
+    setErrors((prev) =>
+      prev[field] && !VALIDATORS[field](value)
+        ? { ...prev, [field]: "" }
+        : prev
+    );
+  };
+
+  const handleBlur = (field) => () =>
+    setErrors((prev) => ({ ...prev, [field]: VALIDATORS[field](values[field]) }));
+
+  // Final gate: re-check everything, then focus the first offending input.
+  const validateAll = () => {
+    const next = {};
+    for (const field of FIELDS) next[field] = VALIDATORS[field](values[field]);
+    setErrors(next);
+    const firstInvalid = FIELDS.find((field) => next[field]);
+    if (firstInvalid) {
+      refs[firstInvalid].current?.focus();
+      return false;
+    }
+    return true;
+  };
+
+  // Resolves true only when the password was really changed, so the caller
+  // knows whether it may close the dialog.
   const onSubmit = async () => {
-    try {
-      let isValid = true;
-      if (!password) {
-        setPasswordError("Password is required!");
-        isValid = false;
-      }
-      if (password && password.length < 8) {
-        setPasswordError("Password should be at least 8 characters!");
-        isValid = false;
-      }
-      if (!isValid) return;
+    setFormError("");
+    if (!validateAll()) return false;
 
+    setIsSaving(true);
+    try {
       const result = await updateAccountData({
         projectCode: activeProject.code,
         docId: accountId,
-        data: { password },
+        data: { password: values.password },
       });
-      if (result.ok) {
-        toast("Account password has been changed successfully!");
-      } else {
-        const body = await result.json();
-        return toast(body.message);
+      if (!result.ok) {
+        const body = await result.json().catch(() => null);
+        const msg = body?.message || "Error has happen while contacting the api!";
+        setFormError(msg);
+        toast(msg, { type: "error" });
+        return false;
       }
-
-      onDone();
+      toast("Account password has been changed successfully!");
+      return true;
     } catch (error) {
       console.log("Couldn't change password", error);
+      const msg = "Error has happen while contacting the api!";
+      setFormError(msg);
+      toast(msg, { type: "error" });
+      return false;
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -56,19 +102,22 @@ function SetPasswordModal({
             New Password <span className="text-red-500">*</span>
           </label>
           <input
+            ref={refs.password}
             type="password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setPasswordError("");
-            }}
-            className={`w-full px-3 py-2 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border-gray-300`}
+            value={values.password}
+            onChange={handleChange("password")}
+            onBlur={handleBlur("password")}
+            aria-invalid={errors.password ? "true" : undefined}
+            className={`w-full px-3 py-2 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+              errors.password ? "border-red-500" : "border-gray-300"
+            }`}
             placeholder="Enter New Password"
           />
-          {passwordError && (
-            <p className="text-red-500 text-sm mt-1">{passwordError}</p>
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">{errors.password}</p>
           )}
         </div>
+        {formError && <p className="text-red-500 text-sm">{formError}</p>}
       </div>
       <div className="flex justify-end w-full">
         <div className="flex gap-2 mt-4">
@@ -80,8 +129,10 @@ function SetPasswordModal({
             Cancel
           </Button>
           <Button
+            isLoading={isSaving}
             onClick={async () => {
-              await onSubmit();
+              const saved = await onSubmit();
+              if (saved) onDone();
             }}
             className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition cursor-pointer max-w-37.5"
           >
