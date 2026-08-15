@@ -29,6 +29,29 @@ function decodeJwtExp(token) {
   }
 }
 
+// Shout once per page load when the dashboard is running over plain HTTP, where
+// the session degrades to a JS-readable token (see persistSession below). This
+// is aimed at whoever deployed the console — the fix is TLS, not a code change.
+let warnedAboutInsecureSession = false;
+function warnInsecureTokenStorage() {
+  if (warnedAboutInsecureSession) return;
+  warnedAboutInsecureSession = true;
+  console.warn(
+    "[FlexDocs] Insecure session: this console is served over plain HTTP, so " +
+      "the admin JWT is stored in a JavaScript-readable cookie and is sent as " +
+      "an Authorization: Bearer header. Any XSS on this page can steal it and " +
+      "impersonate you. Deploy the console behind HTTPS — over TLS the API " +
+      "keeps the token in an httpOnly, SameSite=None cookie protected by a " +
+      "CSRF token, and JavaScript never sees it."
+  );
+}
+
+// Warn on load rather than only at login, so an operator who is already signed
+// in still sees it every time the console is opened.
+if (typeof window !== "undefined" && !usesCookieAuth()) {
+  warnInsecureTokenStorage();
+}
+
 // Persist whatever the browser needs to keep after a successful login/register.
 //
 // In cookie-auth (HTTPS) mode the JWT itself is NOT stored anywhere JS can read
@@ -50,6 +73,21 @@ function persistSession(body) {
       getCookieOptions()
     );
   } else {
+    // KNOWN, DELIBERATE RISK — HTTP-only fallback.
+    //
+    // Over plain HTTP the browser refuses the SameSite=None cookie the API
+    // would otherwise set (None requires Secure), so there is no way to keep
+    // the token out of JavaScript's reach while still authenticating the
+    // cross-origin API calls. The whole body — token included — therefore goes
+    // into the JS-readable `user` cookie and rides on the Authorization header,
+    // which means an XSS on this page can exfiltrate a full admin session.
+    //
+    // This is NOT fixed by changing storage: localStorage/sessionStorage/memory
+    // are equally readable by injected script, and the token must survive a
+    // reload for the edge middleware's gate. The real mitigation is TLS, which
+    // flips this whole branch off (see authMode.js), so we make the exposure
+    // loud rather than silent.
+    warnInsecureTokenStorage();
     Cookies.set("user", JSON.stringify(body), getCookieOptions());
   }
 }
@@ -115,6 +153,15 @@ export const logout = () => {
   } catch {
     /* ignore */
   }
+  // Close every open realtime socket. `logout()` is also reached from a
+  // client-side redirect (UserSidebar), which does NOT reload the page, so
+  // without this the sockets survive logout and keep reconnecting as the
+  // signed-out user. Imported lazily to keep socket.io-client out of bundles
+  // that only need `login` (the login page imports this module too), and
+  // best-effort like the fetch above — teardown must never block signing out.
+  import("./socket")
+    .then((m) => m.clearSockets())
+    .catch(() => {});
 }
 
 export const logoutAndRedirect = (path = "/login") => {

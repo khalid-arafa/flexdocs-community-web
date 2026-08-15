@@ -6,8 +6,21 @@ import { Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
+// Initials fallback for a user with no usable avatar URL. Kept as local markup
+// rather than a remote placeholder image: the sidebar renders on every screen of
+// an operator console, so it must not fire a third-party request on every page
+// view just to draw an empty circle.
+const getInitials = (label) => {
+  const parts = String(label || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return parts.slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+};
+
 function UserInfoView({ withSettings = true, sidebarClosed }) {
   const [user, setUser] = useState(null);
+  // Also covers a well-formed avatar URL that 404s or is blocked, which the
+  // remote placeholder used to mask.
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const router = useRouter();
   const {toggleSidebar} = useLayoutContext();
 
@@ -24,20 +37,26 @@ function UserInfoView({ withSettings = true, sidebarClosed }) {
 
   if (!user) return <></>;
 
-  const avatarSrc = user.avatar && /^https?:\/\//.test(user.avatar)
-    ? user.avatar
-    : "https://picsum.photos/80";
+  const avatarSrc =
+    user.avatar && /^https?:\/\//.test(user.avatar) ? user.avatar : null;
 
   return (
     <div>
       {/* User info */}
       <div className="flex flex-row p-3 mt-2 mb-2 justify-center items-center">
         <div className="flex flex-row flex-1 max-w-80">
-          <img
-            src={avatarSrc}
-            alt="User avatar"
-            className="w-10 h-10 rounded-full"
-          />
+          {avatarSrc && !avatarFailed ? (
+            <img
+              src={avatarSrc}
+              alt="User avatar"
+              onError={() => setAvatarFailed(true)}
+              className="w-10 h-10 rounded-full shrink-0 object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full shrink-0 bg-white/20 text-white flex items-center justify-center text-sm font-semibold select-none">
+              {getInitials(user.name || user.email)}
+            </div>
+          )}
           {!sidebarClosed && (
             <div className="ml-3">
               <p className="font-medium">{user?.name || "loading ..."}</p>

@@ -23,11 +23,14 @@ import {
   getBucketContent,
   getSignedDownloadUrl,
 } from "@/utils/api";
-import { API_URL } from "@/constants";
-import { usesCookieAuth } from "@/utils/authMode";
 import { formatDate } from "@/utils/datetime";
 import LoadMorePagination from "@/components/LoadMorePagination";
-import { formatBytes, getFileUrl, isImageFile } from "@/utils/files";
+import {
+  formatBytes,
+  getFileUrl,
+  isImageFile,
+  toAbsoluteApiUrl,
+} from "@/utils/files";
 import { copyToClipboard } from "@/utils/clipboard";
 import { getSocket } from "@/utils/socket";
 import { useProjectsContext } from "@/context/ProjectsContext";
@@ -80,6 +83,22 @@ const normalizeId = (id) => {
   return String(id);
 };
 
+// The API serves a file without any credential only when it is explicitly
+// public (`if (!file.isPublic && !req.isDbAdmin)` on the download route), so a
+// missing/undefined flag counts as private here too — same rule, same side.
+const isPublicFile = (item) => item?.isPublic === true;
+
+const THUMB_SIZE = "small";
+// Re-mint a signed url shortly before it lapses, so a link copied — or a
+// thumbnail rendered — at the very end of its lifetime is still usable.
+const SIGNED_URL_SKEW_MS = 60 * 1000;
+
+const signedUrlKey = (fileId, size) => `${fileId}|${size || ""}`;
+
+const isSignedUrlFresh = (entry) =>
+  !!entry?.url &&
+  (!entry.expires || entry.expires * 1000 - Date.now() > SIGNED_URL_SKEW_MS);
+
 const isInCurrentBucket = (item, currentBucketId) => {
   if (!item) return false;
   if (item.type === "bucket") {
@@ -94,8 +113,15 @@ const isInCurrentBucket = (item, currentBucketId) => {
  * Declared at module scope so the <img> is not remounted — and the thumbnail
  * not refetched — on every parent render.
  */
-function ItemIcon({ item, thumbUrl }) {
+function ItemIcon({ item, thumbUrl, onThumbError }) {
   const [thumbFailed, setThumbFailed] = useState(false);
+
+  // A row keeps its identity across realtime inserts now (rows are keyed by
+  // file id), but the url itself can still change under the same row when an
+  // expired signature is re-minted — that deserves a fresh attempt.
+  useEffect(() => {
+    setThumbFailed(false);
+  }, [thumbUrl]);
 
   // One box for every row so names stay aligned whether the row shows a
   // thumbnail, a folder or a type icon.
@@ -110,7 +136,10 @@ function ItemIcon({ item, thumbUrl }) {
         src={thumbUrl}
         alt=""
         loading="lazy"
-        onError={() => setThumbFailed(true)}
+        onError={() => {
+          setThumbFailed(true);
+          onThumbError?.();
+        }}
         className={`${box} rounded object-cover bg-gray-100 border border-gray-200`}
       />
     );
@@ -142,29 +171,51 @@ export default function StorageTabContent() {
   const currentBucketIdRef = useRef(currentBucketId);
   currentBucketIdRef.current = currentBucketId;
 
+  // Concurrency guards, mirroring DatabaseContext: `loading`/`loadingMore` are
+  // async state and cannot gate re-entrancy. `inFlight` dedupes an identical
+  // request already running; the `reqId` counter marks the newest request so a
+  // slower earlier one (the page-N fetch that fires before the bucket switch
+  // has reset the page) cannot merge its stale rows in or clear the spinner the
+  // current request is still showing.
+  const contentReqIdRef = useRef(0);
+  const contentInFlightRef = useRef(new Set());
+
   // fetching
   const fetchContents = async (bucket) => {
     if (!activeProject) return;
-    const isFirstLoad = content.length === 0;
-    if (isFirstLoad) setLoading(true);
+    const bucketId = normalizeId(bucket?._id) || "home";
+    const requestKey = `${activeProject.code}#${bucketId}#${page}`;
+    if (contentInFlightRef.current.has(requestKey)) return;
+    contentInFlightRef.current.add(requestKey);
+    const reqId = ++contentReqIdRef.current;
+
+    // Decide the spinner from the PAGE, not from content.length: navigating
+    // into a bucket clears the list and fetches synchronously after, so the
+    // length still described the bucket we just left.
+    const isFirstPage = page === 1;
+    if (isFirstPage) setLoading(true);
     else setLoadingMore(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 400));
       const result = await getBucketContent({
         projectCode: activeProject.code,
-        bucketId: bucket?._id || "home",
+        bucketId,
         ipp: 20,
         page,
       });
 
-      const body = await result.json();     
+      const body = await result.json();
+      if (reqId !== contentReqIdRef.current) return; // superseded
 
       if (result.ok) {
+        // Page 1 replaces (fresh bucket/project); later pages append.
         setContent((prev) =>
           Array.from(
             new Map(
-              [...prev, ...body.content].map((doc) => [doc._id, { ...doc }])
+              [...(isFirstPage ? [] : prev), ...body.content].map((doc) => [
+                normalizeId(doc._id),
+                { ...doc },
+              ])
             ).values()
           )
         );
@@ -173,32 +224,129 @@ export default function StorageTabContent() {
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
-      if (isFirstLoad) setLoading(false);
-      setLoadingMore(false);
+      contentInFlightRef.current.delete(requestKey);
+      if (reqId === contentReqIdRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
+  };
+
+  // Everything that changes which bucket is being listed goes through this, in
+  // the same batch as the path change: without the page reset, moving from page
+  // N of one bucket into another first fetched page N of the new bucket, and
+  // only then the page-1 fetch the [bucketPathList] effect triggers.
+  const resetListing = () => {
+    setContent([]);
+    setTotalCount(0);
+    setPage(1);
   };
 
   // Navigate to a directory
   const navigateToDirectory = (bucketItem) => {
     if (loading === true || loadingMore === true) return;
+    resetListing();
     setBucketPathList((prev) => [...prev, bucketItem]);
-    setContent([]);
   };
 
-  const getDownloadableLink = ({ file, withToken = false, size }) =>
-    getFileUrl({
-      file,
-      // Cookie-auth (HTTPS): the admin session cookie rides the request and the
-      // admin bypass on the API serves any file, so no token belongs in the URL
-      // (it would only leak into history/logs). Bearer (dev/HTTP): keep the
-      // project token for private projects as before.
-      token: usesCookieAuth()
-        ? undefined
-        : withToken || !activeProject?.isPublic
-        ? activeProject?.projectToken
-        : undefined,
-      size,
+  // Short-lived signed download urls, keyed by "<fileId>|<size>". Kept in state
+  // (a newly minted thumbnail has to re-render its row) and mirrored in a ref
+  // so the async minter always reads the freshest map. `mintingRef` holds the
+  // in-flight promise per key so a re-render cannot fire a second mint.
+  const [signedUrls, setSignedUrls] = useState({});
+  const signedUrlsRef = useRef(signedUrls);
+  signedUrlsRef.current = signedUrls;
+  const mintingRef = useRef(new Map());
+  const thumbRetriedRef = useRef(new Set());
+
+  // Items are dropped rather than linked while they still belong to the project
+  // we just left — their ids mean nothing under the new project's code.
+  const belongsToActiveProject = (item) =>
+    !!activeProject?.code &&
+    (!item?.projectCode || item.projectCode === activeProject.code);
+
+  /**
+   * Absolute url for a private file: a server-minted, time-limited, file-scoped
+   * signature — never the project token, which is long-lived, project-wide and
+   * would end up in history and logs. Returns null when minting fails.
+   */
+  const ensureSignedUrl = async (item, size = "") => {
+    if (!activeProject?.code || !belongsToActiveProject(item)) return null;
+    const fileId = normalizeId(item._id);
+    if (!fileId) return null;
+    const key = signedUrlKey(fileId, size);
+
+    const cached = signedUrlsRef.current[key];
+    if (isSignedUrlFresh(cached)) return cached.url;
+
+    const pending = mintingRef.current.get(key);
+    if (pending) return pending;
+
+    const request = (async () => {
+      try {
+        const res = await getSignedDownloadUrl({
+          projectCode: activeProject.code,
+          fileId,
+          size,
+        });
+        if (!res.ok) return null;
+        const body = await res.json();
+        const url = toAbsoluteApiUrl(body?.url);
+        if (!url) return null;
+        setSignedUrls((prev) => ({
+          ...prev,
+          [key]: { url, expires: body.expires },
+        }));
+        return url;
+      } catch {
+        return null;
+      } finally {
+        mintingRef.current.delete(key);
+      }
+    })();
+
+    mintingRef.current.set(key, request);
+    return request;
+  };
+
+  /** Plain url — valid only for a public file, which needs no credential. */
+  const getPublicFileUrl = (item, size) =>
+    getFileUrl({ file: item, size, projectCode: activeProject.code });
+
+  /**
+   * Thumbnail source for a row. Public files are served without any credential,
+   * so they get a plain url; private ones wait for their signed url and show
+   * the type icon in the meantime.
+   */
+  const getThumbUrl = (item) => {
+    if (item.type !== "file" || !isImageFile(item)) return null;
+    if (!belongsToActiveProject(item)) return null;
+    if (isPublicFile(item)) return getPublicFileUrl(item, THUMB_SIZE);
+    const entry = signedUrls[signedUrlKey(normalizeId(item._id), THUMB_SIZE)];
+    return isSignedUrlFresh(entry) ? entry.url : null;
+  };
+
+  /** A signature that lapsed between render and load: drop it and re-mint once. */
+  const handleThumbError = (item) => {
+    if (isPublicFile(item)) return;
+    const key = signedUrlKey(normalizeId(item._id), THUMB_SIZE);
+    if (!signedUrlsRef.current[key]) return;
+    if (thumbRetriedRef.current.has(key)) return;
+    thumbRetriedRef.current.add(key);
+    // Removing the entry re-runs the minting effect below (it watches
+    // signedUrls), which re-mints because the cache no longer answers.
+    setSignedUrls((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
     });
+  };
+
+  /** Absolute url to open/share a file — signed when the file is private. */
+  const getShareableLink = async (item) =>
+    isPublicFile(item) && belongsToActiveProject(item)
+      ? getPublicFileUrl(item)
+      : await ensureSignedUrl(item);
 
   const getItemMenuChoices = (item) => {
     let choices = [
@@ -245,26 +393,16 @@ export default function StorageTabContent() {
         label: "Copy Downloadable Link",
         icon: <Copy size={18} color="black" />,
         onClick: async () => {
-          let link;
-          // In cookie-auth mode a private file has no URL token, so a bare link
-          // only works in the admin's own (cookie-bearing) browser. Mint a
-          // time-limited signed link instead — shareable without exposing a
-          // reusable token. Falls back to the bare link on any failure.
-          if (usesCookieAuth() && item.isPublic === false) {
-            try {
-              const res = await getSignedDownloadUrl({
-                projectCode: activeProject.code,
-                fileId: item._id,
-              });
-              if (res.ok) {
-                const body = await res.json();
-                if (body?.url) link = `${API_URL}/${body.url}`;
-              }
-            } catch {
-              /* fall through to the bare link */
-            }
+          // A public file has a plain, permanent url. A private one gets a
+          // time-limited signed link — shareable, scoped to this single file,
+          // and with no reusable project token in it. There is no bare-link
+          // fallback: it would either not work at all (bearer mode) or work
+          // only inside the admin's own cookie-bearing browser.
+          const link = await getShareableLink(item);
+          if (!link) {
+            toast("Failed to create a shareable link");
+            return;
           }
-          if (!link) link = getDownloadableLink({ file: item });
           const ok = await copyToClipboard(link);
           toast(ok ? "Link copied to clipboard" : "Failed to copy the link");
         },
@@ -292,6 +430,35 @@ export default function StorageTabContent() {
     return choices;
   };
 
+  const openFile = async (item) => {
+    if (isPublicFile(item) && belongsToActiveProject(item)) {
+      window.open(getPublicFileUrl(item), "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    // A private file's url has to be minted first, and a window.open() after an
+    // await is what popup blockers eat. Open the tab synchronously inside the
+    // click gesture, sever its opener while it is still same-origin about:blank
+    // (no reverse-tabnabbing handle on the dashboard), then send it to the
+    // signed url.
+    const tab = window.open("", "_blank");
+    if (tab) {
+      try {
+        tab.opener = null;
+      } catch {
+        /* not settable everywhere; the target is our own API origin */
+      }
+    }
+    const link = await ensureSignedUrl(item);
+    if (!link) {
+      if (tab) tab.close();
+      toast("Failed to open the file");
+      return;
+    }
+    if (tab) tab.location.href = link;
+    else window.open(link, "_blank", "noopener,noreferrer");
+  };
+
   const handleItemClick = (item) => {
     if (loading === true || loadingMore === true) return;
 
@@ -300,8 +467,7 @@ export default function StorageTabContent() {
     }
 
     if (item.type === "file") {
-      const link = getDownloadableLink({ file: item, withToken: true });
-      window.open(link, "_blank", "noopener,noreferrer");
+      openFile(item);
     }
   };
 
@@ -379,8 +545,12 @@ export default function StorageTabContent() {
   // Load contents when path changes
   useEffect(() => {
     if (!activeProject?.code) return;
-    const room = `${activeProject.code}-storage`;
+    // getSocket returns null when the project has no token — calling .on() on
+    // that null threw and took the whole storage screen down. Same guard the
+    // database panels and FileUploader already use.
     const socket = getSocket(activeProject.projectToken);
+    if (!socket) return;
+    const room = `${activeProject.code}-storage`;
     const listener = (payload) => handleDataRef.current(payload);
     socket.on(room, listener);
     socket.emit("watch-buckets", {});
@@ -397,10 +567,33 @@ export default function StorageTabContent() {
     fetchContents(getCurrentBucket());
   }, [page, currentBucketId, activeProject]);
 
+  // Safety net for path changes that do not come from the handlers above — the
+  // project switch that empties bucketPathList inside StorageContext, most of
+  // all. Setting page 1 when it is already 1 is a no-op, so the common case
+  // costs nothing and never doubles a fetch.
   useEffect(() => {
     setPage(1);
     setTotalCount(0);
+    setContent((prev) => (prev.length ? [] : prev));
   }, [bucketPathList]);
+
+  // A signed url belongs to one project's file; keep nothing across a switch.
+  useEffect(() => {
+    setSignedUrls({});
+    mintingRef.current.clear();
+    thumbRetriedRef.current.clear();
+  }, [activeProject?.code]);
+
+  // Mint the signed urls the private image rows need for their thumbnails.
+  // Watching signedUrls too lets handleThumbError re-mint simply by dropping
+  // the lapsed entry; ensureSignedUrl short-circuits on everything cached.
+  useEffect(() => {
+    content.forEach((item) => {
+      if (item.type !== "file" || !isImageFile(item)) return;
+      if (isPublicFile(item) || !belongsToActiveProject(item)) return;
+      ensureSignedUrl(item, THUMB_SIZE);
+    });
+  }, [content, signedUrls, activeProject]);
 
   // Render breadcrumbs
   const renderBreadcrumbs = () => {
@@ -424,7 +617,7 @@ export default function StorageTabContent() {
                   currentBucket._id === thisBucket._id
                 )
                   return;
-                setContent([]);
+                resetListing();
                 setBucketPathList((prev) => prev.slice(0, index));
               }}
               className={`hover:underline px-2 cursor-pointer ${
@@ -475,9 +668,12 @@ export default function StorageTabContent() {
             </div>
 
             {/* Cards */}
+            {/* Keyed by file id, never by index: realtime additions PREPEND,
+                which shifted every row's per-row state (a failed thumbnail, for
+                one) onto its neighbour. */}
             {content.map((item, index) => (
               <div
-                key={index}
+                key={normalizeId(item._id) || `${item.type}-${item.name}`}
                 className="bg-white border-b border-gray-200 hover:bg-gray-50 p-4"
               >
                 <div className="flex items-center justify-between gap-4">
@@ -490,15 +686,8 @@ export default function StorageTabContent() {
                   <div className="flex items-center min-w-0 flex-1">
                     <ItemIcon
                       item={item}
-                      thumbUrl={
-                        item.type === "file" && isImageFile(item)
-                          ? getDownloadableLink({
-                              file: item,
-                              withToken: true,
-                              size: "small",
-                            })
-                          : null
-                      }
+                      thumbUrl={getThumbUrl(item)}
+                      onThumbError={() => handleThumbError(item)}
                     />
                     <Tooltip text={getItemName(item)} className="min-w-0 flex-1">
                       <button

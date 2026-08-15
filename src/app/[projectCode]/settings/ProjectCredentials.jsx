@@ -46,12 +46,18 @@ function ProjectCredentials() {
     if (!confirmed) return;
     try {
       const result = await deleteProjectCreds({code: activeProject.code, id: cred._id});
-      const body = await result.json();
-      if(body.success) {
+      const body = await result.json().catch(() => null);
+      if(body?.success) {
         setCreds(prev => prev.filter(i => i._id != cred._id));
+        toast('Credentials have been deleted', { type: 'success' });
+      } else {
+        // A rejected delete used to leave the row in place with no explanation,
+        // which reads as "the click did nothing".
+        toast(body?.message || 'Credentials could not be deleted', { type: 'error' });
       }
     } catch (error) {
-      console.log(error);      
+      console.log(error);
+      toast('Credentials could not be deleted', { type: 'error' });
     }
   };
 
@@ -69,10 +75,24 @@ function ProjectCredentials() {
     if(activeProject == null || activeProject.code == null) return;    
     const load = async () => {
       setIsLoading(true);
-      const result = await getProjectCreds({code: activeProject.code});
-      const body = await result.json();
-      setCreds(body);
-      setIsLoading(false);
+      // A network error here used to reject unhandled and leave the spinner up
+      // forever; a non-2xx body used to be fed straight into setCreds().
+      try {
+        const result = await getProjectCreds({code: activeProject.code});
+        const body = await result.json().catch(() => null);
+        if (!result.ok) {
+          toast(body?.message || 'Could not load project credentials', { type: 'error' });
+          setCreds([]);
+          return;
+        }
+        setCreds(Array.isArray(body) ? body : []);
+      } catch (error) {
+        console.log(error);
+        toast('Could not load project credentials', { type: 'error' });
+        setCreds([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
     load();
   }, [activeProject, setIsLoading]);

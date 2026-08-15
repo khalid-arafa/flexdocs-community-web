@@ -35,22 +35,30 @@ export const metadata = {
   },
 };
 
+// Every app-wide context is mounted here and ONLY here. Nested layouts used to
+// re-mount Layout/Projects/ProjectAuth/Dialogs, which split state ownership by
+// accident: pages under /[projectCode] read the inner Projects instance but the
+// root Storage/Database ones, and two LayoutProviders tracked `sidebarClosed`
+// independently against the same localStorage key. One provider, one owner.
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="bg-gray-100">
       <body className={`${montserrat.className} antialiased`}>
         <LayoutProvider>
-        <ProjectsContextProvider>
-          <ProjectAuthContextProvider>
-            <StorageContextProvider>
-              <DatabaseContextProvider>
-                <DialogsProvider>{children}</DialogsProvider>
-              </DatabaseContextProvider>
-            </StorageContextProvider>
-          </ProjectAuthContextProvider>
-          <ToastContainer />
-        </ProjectsContextProvider>
+          <ProjectsContextProvider>
+            <ProjectAuthContextProvider>
+              <StorageContextProvider>
+                <DatabaseContextProvider>
+                  <DialogsProvider>{children}</DialogsProvider>
+                </DatabaseContextProvider>
+              </StorageContextProvider>
+            </ProjectAuthContextProvider>
+          </ProjectsContextProvider>
         </LayoutProvider>
+        {/* The one and only toast host. react-toastify renders every toast in
+            EVERY mounted container, so a second one anywhere in the tree shows
+            each toast twice. */}
+        <ToastContainer />
       </body>
     </html>
   );

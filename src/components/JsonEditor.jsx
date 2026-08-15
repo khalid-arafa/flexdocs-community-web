@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import Button from "./Button";
 
@@ -9,16 +9,45 @@ const CodeEditor = dynamic(
   { ssr: false }
 );
 
+// `jsonData` is the editor's source text. It is a genuine prop, not just a seed:
+// the Rules tabs render the editor immediately and fill `rules` in only once the
+// fetch resolves, and DocumentBox re-points it at a different document without
+// unmounting. `useState(jsonData)` read the prop exactly once, so any value that
+// arrived after mount was silently ignored (DocumentBox papered over this with a
+// fake 150ms "loading" flag that forced a remount).
+//
+// So the source is tracked: local typing owns `value`, but whenever the incoming
+// prop CHANGES the editor re-seeds from it. Comparing against the last prop we
+// consumed (rather than against `value`) is what keeps an unrelated parent
+// re-render from wiping edits in progress.
 function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundColor = "#f5f5f5", className}) {
-  const [isChanged, setIsChanged] = useState(false);
-  const [value, setValue] = useState(jsonData);
+  const source = typeof jsonData === "string" ? jsonData : "";
+  const [value, setValue] = useState(source);
   const [isValid, setIsValid] = useState(true);
+  const lastSourceRef = useRef(source);
+
+  useEffect(() => {
+    if (source === lastSourceRef.current) return;
+    lastSourceRef.current = source;
+    setValue(source);
+    setIsValid(true);
+  }, [source]);
+
+  // "Changed" is derived, never stored — that is what makes Revert correct:
+  // it simply puts the source text back, and the button disappears because the
+  // two are equal again. (It used to call `setValue(jsonData)`; that only ever
+  // worked because DocumentBox passed a *function*, which React happened to
+  // treat as a state updater.)
+  const isChanged = value !== source;
 
   const handleEditorChange = (evn) => {
-    const newValue = evn.target.value;
-    setValue(newValue);
+    setValue(evn.target.value);
     if (!isValid) setIsValid(true);
-    if (!isChanged) setIsChanged(true);
+  };
+
+  const handleRevert = () => {
+    setValue(source);
+    setIsValid(true);
   };
 
   const handleSave = useCallback(() => {
@@ -86,14 +115,7 @@ function JsonEditor({ jsonData, onSave, onCancel, height = "400px", backgroundCo
           </Button>
         )}
         {isChanged && (
-          <Button
-            onClick={() => {
-              setValue(jsonData);
-              setIsValid(true);
-              setTimeout(() => setIsChanged(false), 200);
-            }}
-            className={`max-w-37.5`}
-          >
+          <Button onClick={handleRevert} className={`max-w-37.5`}>
             Revert
           </Button>
         )}

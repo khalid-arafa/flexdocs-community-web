@@ -8,7 +8,7 @@ import { useProjectsContext } from "@/context/ProjectsContext";
 import DropdownButton from "@/components/DropdownButton";
 import { showDialog } from "@/components/CustomDialog";
 import AddEditBucket from "./AddEditBucket";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import StorageTabContent from "./StorageTabContent";
 import { useStorageContext } from "@/context/StorageContext";
 import { loadStorageRules, saveStorageRules } from "@/utils/api";
@@ -139,7 +139,6 @@ export default function page() {
           />
         }
       />
-      <ToastContainer />
     </div>
   );
 }

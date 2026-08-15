@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import {
-  Briefcase,
   Loader,
   Lock,
   MoreVerticalIcon,
@@ -23,20 +22,70 @@ import AddEditAccount from "../../../components/AddEditAccount";
 import { showDialog } from "@/components/CustomDialog";
 import { formatDate } from "@/utils/datetime";
 import SetPasswordModal from "../../../components/SetPasswordModal";
-import {
-  deleteAccount,
-  deleteSystemUserById,
-  updateAccountData,
-} from "@/utils/api";
+import { deleteAccount, updateAccountData } from "@/utils/api";
 import { toast } from "react-toastify";
 import { getSocket } from "@/utils/socket";
 import { useProjectAuthContext } from "@/context/ProjectAuthContext";
-import { useRouter } from "next/navigation";
+import { mergeAdd, mergeUpdate, mergeDelete } from "@/utils/realtimeMerge";
 import AuthRulesTab from "./AuthRulesTab";
 
-function AuthenticationTab({ forAdmin = false }) {
+// Realtime account events don't all carry the same identifier: add/update push
+// the whole account (which has both `_id` and `uid`), while delete pushes only
+// the Mongo query the API deleted with — `{ _id }`, no `uid`. The list is keyed
+// by `uid`, so every event item is normalized to one before merging. Without
+// this a delete matched `undefined` against every row, removed nothing, and the
+// deleted account stayed on screen while the total silently dropped.
+const withUid = (items) =>
+  items.map((item) => ({
+    ...item,
+    uid: item.uid ?? (item._id != null ? String(item._id) : undefined),
+  }));
+
+// Initials fallback for accounts with no usable avatar URL. Deliberately local
+// markup rather than a remote placeholder service: this is an operator console,
+// so it must not emit a third-party request (and reveal who is being viewed)
+// just to draw an empty circle.
+const getInitials = (label) => {
+  const parts = String(label || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return parts.slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+};
+
+const AccountAvatar = ({ user }) => {
+  // `failed` also covers a URL that is well-formed but 404s/blocked, which the
+  // remote placeholder used to mask.
+  const [failed, setFailed] = useState(false);
+  const src =
+    user.avatar && /^https?:\/\//.test(user.avatar) ? user.avatar : null;
+
+  if (!src || failed) {
+    return (
+      <div className="h-10 w-10 rounded-full bg-brand/10 text-brand flex items-center justify-center text-sm font-semibold select-none">
+        {getInitials(user.name || user.email)}
+      </div>
+    );
+  }
+
+  return (
+    /* Avatars are arbitrary operator-supplied URLs, so next/image optimization
+       can't allowlist their hosts — `unoptimized` lets any URL render (governed
+       by CSP img-src) instead of throwing for every host not in
+       images.remotePatterns. */
+    <Image
+      src={src}
+      alt={`${user.name || user.email || "Account"} avatar`}
+      width={40}
+      height={40}
+      unoptimized
+      onError={() => setFailed(true)}
+      className="h-10 w-10 rounded-full object-cover"
+    />
+  );
+};
+
+function AuthenticationTab() {
   const tabs = [
-    { label: "Accounts", content: <Content forAdmin={forAdmin} /> },
+    { label: "Accounts", content: <Content /> },
     { label: "Rules", content: <AuthRulesTab /> },
   ];
   const { activeProject } = useProjectsContext();
@@ -70,7 +119,7 @@ function AuthenticationTab({ forAdmin = false }) {
   );
 }
 
-const Content = ({ forAdmin = false }) => {
+const Content = () => {
   const { activeProject } = useProjectsContext();
 
   const {
@@ -88,8 +137,6 @@ const Content = ({ forAdmin = false }) => {
 
   const { confirm } = useDialogs();
 
-  const router = useRouter();
-
   //
   // get choices
   const choices = (account) => {
@@ -103,16 +150,17 @@ const Content = ({ forAdmin = false }) => {
           });
           if (!confirmed) return;
           try {
-            const result = forAdmin
-              ? await deleteSystemUserById(account.uid)
-              : await deleteAccount({
-                  projectCode: activeProject.code,
-                  docId: account.uid,
-                });
+            const result = await deleteAccount({
+              projectCode: activeProject.code,
+              docId: account.uid,
+            });
 
             if (result.ok) {
+              // Drop the row optimistically, but leave accountsTotalCount to the
+              // socket handler. The server echoes this delete back to the client
+              // that issued it, so decrementing here as well took the total down
+              // by two for every account the operator deleted themselves.
               setAccounts((prev) => prev.filter((a) => a.uid !== account.uid));
-              setAccountsTotalCount((prev) => prev - 1);
               return toast("Account has been deleted successfully.");
             }
             const body = await result.json();
@@ -178,14 +226,6 @@ const Content = ({ forAdmin = false }) => {
         });
       },
     });
-    if (forAdmin)
-      result.unshift({
-        label: "Projects",
-        icon: <Briefcase size={18} color="#000" />,
-        onClick: async () => {
-          router.push(`/admin/?userId=${account.uid}`);
-        },
-      });
     return result;
   };
 
@@ -193,26 +233,31 @@ const Content = ({ forAdmin = false }) => {
     if (!activeProject) return;
     const room = `${activeProject.code}/_auth`;
     
-    const handleData = async (data) => { 
-      if (data.add) {        
-        setAccounts((prev) => {
-          const updated = Array.from(
-            new Map(
-              [...prev, ...data.add]  // New items last, so they overwrite existing
-                .map(doc => [doc.uid, doc])
-            ).values()
-          );
-          return updated;
-        });
+    const handleData = async (data) => {
+      if (data.add) {
+        const added = withUid(data.add);
+        setAccounts((prev) => mergeAdd(prev, added, "uid"));
+        // The total gates "Load More", and adds never touched it: a list grown
+        // by realtime inserts eventually held more rows than the total claimed
+        // existed, so the button vanished while pages were still unloaded.
+        // Functional update for the same reason as delete below.
+        setAccountsTotalCount((prev) => prev + added.length);
+      }
+
+      // Edits made by any other client (or by this project's own SDK) never
+      // reached the list at all — there was no `update` branch — so the tab kept
+      // showing stale names/emails until a full reload. Merging leaves the total
+      // alone: an update changes a row, it doesn't change how many rows exist.
+      if (data.update) {
+        setAccounts((prev) => mergeUpdate(prev, withUid(data.update), "uid"));
       }
 
       if (data.delete) {
-        setAccounts((prev) =>
-          prev.filter((i) => !data.delete.map((x) => x.uid).includes(i.uid))
-        );
+        const deleted = withUid(data.delete);
+        setAccounts((prev) => mergeDelete(prev, deleted, "uid"));
         // Functional update: this handler is bound once per effect, so reading
         // accountsTotalCount from the closure drifted after any earlier event.
-        setAccountsTotalCount((prev) => prev - data.delete.length);
+        setAccountsTotalCount((prev) => prev - deleted.length);
       }
     };
     // Guard a null socket (project without a token) — .on() on null would crash
@@ -272,19 +317,7 @@ const Content = ({ forAdmin = false }) => {
                       user.isActive ? "" : "border-3 border-red-500"
                     }`}
                   >
-                    {/* Avatars are arbitrary operator-supplied URLs, so next/image
-                        optimization can't allowlist their hosts — `unoptimized`
-                        lets any URL render (governed by CSP img-src) instead of
-                        throwing for every host not in images.remotePatterns, which
-                        is what happened to any non-picsum avatar before. */}
-                    <Image
-                      src={user.avatar && /^https?:\/\//.test(user.avatar) ? user.avatar : "https://picsum.photos/80"}
-                      alt={`${user.name}'s avatar`}
-                      width={40}
-                      height={40}
-                      unoptimized
-                      className="rounded-full object-cover"
-                    />
+                    <AccountAvatar user={user} />
                   </div>
                   <span className="text-gray-700 truncate">{user.name || "-No Name-"}</span>
                 </div>

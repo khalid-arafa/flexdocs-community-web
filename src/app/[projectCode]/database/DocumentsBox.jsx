@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Loader, MoreVerticalIcon, Pencil, Plus, X } from "lucide-react";
+import { AlertTriangle, ChevronRight, Loader, MoreVerticalIcon, Pencil, Plus, RefreshCw, X } from "lucide-react";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useProjectsContext } from "@/context/ProjectsContext";
 import { formatDate } from "@/utils/datetime";
@@ -34,6 +34,8 @@ function DocumentsBox() {
     setCollections,
     setTotalCollectionsCount,
     setSelectedCollection,
+    loadCollectionDocuments,
+    error,
   } = useDatabaseContext();
 
   const { confirm } = useDialogs();
@@ -274,6 +276,27 @@ function DocumentsBox() {
           ) : loadingCollectionDocuments === true ? (
             <div className="flex justify-center items-center h-full p-8">
               <Loader className="w-6 h-6 animate-spin text-gray-800" />
+            </div>
+          ) : error && collectionDocuments.length === 0 ? (
+            // A failed fetch used to render as "No documents found", which reads
+            // as "this collection is empty" — the opposite of what happened.
+            // Scoped to the empty list because DatabaseContext keeps a single
+            // `error` shared with the collections load.
+            <div className="flex flex-col justify-center items-center h-64 px-4 text-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
+              <p className="text-sm text-red-600">{error}</p>
+              <button
+                onClick={() =>
+                  loadCollectionDocuments({
+                    projectCode: activeProject?.code,
+                    page: documentsPage,
+                  })
+                }
+                className="inline-flex items-center gap-2 cursor-pointer px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-900 text-sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Try Again
+              </button>
             </div>
           ) : collectionDocuments.length === 0 ? (
             <div className="flex justify-center items-center h-64 text-gray-400 text-sm">

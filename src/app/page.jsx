@@ -6,13 +6,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { AlertTriangle, Loader, Plus, RefreshCw } from "lucide-react";
 import AdminSidebarContent from "@/components/AdminSidebar";
 import LayoutWrapper from "@/components/LayoutWrapper";
+import LoadMorePagination from "@/components/LoadMorePagination";
 
 export default function ProjectsPage() {
-  const { projects, loadingProjects, loadProjects, clearProjects } =
-    useProjectsContext();
+  const {
+    projects,
+    loadingProjects,
+    loadingMoreProjects,
+    loadProjects,
+    clearProjects,
+    projectsPage,
+    setProjectsPage,
+    projectsTotalCount,
+    error,
+  } = useProjectsContext();
 
   const router = useRouter();
 
@@ -22,9 +32,20 @@ export default function ProjectsPage() {
     return () => clearProjects();
   }, []);
 
+  // The admin endpoint pages at 40 (getAllProjects), so loading page 1 alone
+  // made every project past the 40th unreachable. Same page-state-drives-an-
+  // effect shape the collections and accounts lists use.
+  useEffect(() => {
+    if (projectsPage > 1) loadProjects({ page: projectsPage });
+  }, [projectsPage]);
+
   const handleAddProject = () => {
     router.push("/add-project");
   };
+
+  // A failed load must not masquerade as "you have no projects yet".
+  const hasFailed = Boolean(error) && !loadingProjects && !loadingMoreProjects;
+  const isEmpty = !loadingProjects && !error && projects.length === 0;
 
   return (
     <LayoutWrapper sidebar={<AdminSidebarContent />}>
@@ -51,10 +72,16 @@ export default function ProjectsPage() {
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-gray-500">Total projects</p>
             <p className="text-2xl font-semibold text-[#283146] mt-1">
-              {projects.length}
+              {projectsTotalCount || projects.length}
             </p>
           </div>
         </div>
+
+        {loadingProjects && (
+          <div className="flex justify-center items-center p-8">
+            <Loader className="w-6 h-6 animate-spin text-gray-800" />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
           {projects.map((project) => {
@@ -81,7 +108,59 @@ export default function ProjectsPage() {
           })}
         </div>
 
-        {!loadingProjects && projects.length === 0 && (
+        {hasFailed && projects.length === 0 && (
+          <div className="bg-white rounded-xl shadow-md p-10 text-center border border-gray-100 mt-2">
+            <div className="bg-red-50 p-4 rounded-full inline-block mb-4">
+              <AlertTriangle className="w-12 h-12 text-red-500 mx-auto" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+              Couldn&apos;t load your projects
+            </h3>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto">{error}</p>
+            <button
+              onClick={() => loadProjects({ page: projectsPage })}
+              className="inline-flex items-center px-6 py-3 gap-2 cursor-pointer text-base font-medium rounded-lg shadow-md text-white bg-[#0F172A] hover:shadow-lg transition-all duration-300"
+            >
+              <RefreshCw size={18} />
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {hasFailed && projects.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4 p-4 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
+            <span className="flex items-center gap-2">
+              <AlertTriangle size={18} />
+              {error}
+            </span>
+            <button
+              onClick={() => loadProjects({ page: projectsPage })}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded cursor-pointer bg-gray-800 text-white hover:bg-gray-900"
+            >
+              <RefreshCw size={16} />
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {loadingMoreProjects && (
+          <div className="flex justify-center items-center p-4">
+            <Loader className="w-6 h-6 animate-spin text-gray-800" />
+          </div>
+        )}
+
+        {/* Non-admins get the unpaginated /my/projects list, which returns no
+            totalCount — there is nothing more to fetch, so no pager. */}
+        {!hasFailed && !loadingMoreProjects && projectsTotalCount > 0 && (
+          <LoadMorePagination
+            loadMore={() => setProjectsPage(projectsPage + 1)}
+            canLoadMore={projectsTotalCount > projects.length}
+            showing={projects.length}
+            totalCount={projectsTotalCount}
+          />
+        )}
+
+        {isEmpty && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

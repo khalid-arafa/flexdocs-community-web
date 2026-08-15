@@ -1,64 +1,120 @@
 "use client";
-import { DialogsProvider } from "@/context/DialogsContext";
-import { LayoutProvider, useLayoutContext } from "@/context/LayoutContext";
-import { ProjectAuthContextProvider } from "@/context/ProjectAuthContext";
-import { ProjectsContextProvider } from "@/context/ProjectsContext";
+import { useLayoutContext } from "@/context/LayoutContext";
 import { usePathname } from "next/navigation";
-import { ToastContainer } from "react-toastify";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useProjectsContext } from "@/context/ProjectsContext";
+import { getProjectByCode } from "@/utils/api";
 import FileUploader from "@/components/FileUploader";
 import UserSidebar from "@/components/UserSidebar";
-import { Database, Folder, Loader, Settings, Users } from "lucide-react";
+import { AlertTriangle, Database, Folder, Loader, RefreshCw, Settings, Users } from "lucide-react";
 import Tooltip from "@/components/Tooltip";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LayoutWrapper from "@/components/LayoutWrapper";
 
+// No providers here on purpose: Dialogs/Layout/Projects/ProjectAuth are all
+// mounted once in the root layout. Re-mounting them here gave this subtree its
+// own Projects/ProjectAuth state while its pages still read the ROOT
+// Storage/Database state, and put a second LayoutProvider on the same
+// `sidebarClosed` localStorage key.
 export default function layout({ children }) {
-  return (
-    <div>
-      <DialogsProvider>
-        <LayoutProvider>
-          <ProjectsContextProvider>
-            <ProjectAuthContextProvider>
-              <LayoutContent children={children} />
-            </ProjectAuthContextProvider>
-          </ProjectsContextProvider>
-        </LayoutProvider>
-      </DialogsProvider>
-      <ToastContainer />
-    </div>
-  );
+  return <LayoutContent>{children}</LayoutContent>;
 }
 
 const LayoutContent = ({ children }) => {
   const { sidebarClosed, toggleSidebar } = useLayoutContext();
-  const [isLoading, setIsLoading] = useState(true);
 
   const paths = usePathname();
   const projectCode = paths.split("/")[1];
   const title = paths.split("/")[paths.split("/").length - 1];
 
-  const { loadActiveProject, activeProject } = useProjectsContext();
+  const { activeProject, setActiveProject } = useProjectsContext();
 
-  useEffect(() => {    
-    const load = async () => {
-      await loadActiveProject(projectCode);
-      setIsLoading(false);
+  // "loading" | "ready" | "notfound" | "failed"
+  //
+  // The fetch is driven here rather than through ProjectsContext's
+  // loadActiveProject because that helper collapses every failure into one
+  // `error` string, so the layout could not tell "this project does not exist"
+  // (a real 404) from "the request never landed" — and rendered the 404 screen
+  // for both. A user whose network blipped was told their project was deleted.
+  const [status, setStatus] = useState("loading");
+  const [errorMessage, setErrorMessage] = useState("");
+  const reqIdRef = useRef(0);
+
+  const loadProject = useCallback(async () => {
+    if (!projectCode) return;
+    const reqId = ++reqIdRef.current;
+    setStatus("loading");
+    setErrorMessage("");
+    try {
+      const result = await getProjectByCode({ code: projectCode });
+      const body = await result.json().catch(() => ({}));
+      if (reqId !== reqIdRef.current) return; // superseded by a newer project
+      if (result.ok) {
+        setActiveProject(body);
+        setStatus("ready");
+        return;
+      }
+      setActiveProject(null);
+      if (result.status === 404) {
+        setStatus("notfound");
+        return;
+      }
+      setErrorMessage(body.message || "The project could not be loaded.");
+      setStatus("failed");
+    } catch {
+      if (reqId !== reqIdRef.current) return;
+      setActiveProject(null);
+      setErrorMessage(
+        "We could not reach the server. Check your connection and try again."
+      );
+      setStatus("failed");
     }
-    if(!activeProject) load();    
-  }, [setIsLoading, activeProject]);
+  }, [projectCode, setActiveProject]);
 
+  // Keyed on the code, not on `activeProject` being falsy: a layout is NOT
+  // remounted when only a dynamic segment changes, so the old condition left
+  // the previous project's data on screen after navigating from /a to /b.
+  useEffect(() => {
+    if (!projectCode) return;
+    if (activeProject && activeProject.code === projectCode) {
+      setStatus("ready");
+      return;
+    }
+    loadProject();
+  }, [projectCode]);
 
-  if(isLoading) {
-    return <div className="flex justify-center items-center p-8 h-screen bg-white text-black">
-      <Loader className="w-6 h-6 animate-spin text-gray-800" />
-    </div>;
+  if (status === "failed") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
+        <div className="bg-foreground/5 rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <AlertTriangle className="w-12 h-12 text-brand mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            Couldn&apos;t load this project
+          </h2>
+          <p className="text-foreground/50 mb-6">{errorMessage}</p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={loadProject}
+              className="inline-flex items-center gap-2 px-6 py-2 bg-brand text-white rounded-lg hover:opacity-90 transition cursor-pointer"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Try Again
+            </button>
+            <Link
+              href="/"
+              className="inline-block px-6 py-2 border border-foreground/20 text-foreground rounded-lg hover:bg-foreground/5 transition"
+            >
+              Go Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  if(!isLoading && !activeProject) {
+  if (status === "notfound") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
         <div className="bg-foreground/5 rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
@@ -78,6 +134,14 @@ const LayoutContent = ({ children }) => {
         </div>
       </div>
     );
+  }
+
+  // Also covers the brief window where another screen clears activeProject (a
+  // project delete) before the router has navigated away.
+  if (!activeProject || activeProject.code !== projectCode) {
+    return <div className="flex justify-center items-center p-8 h-screen bg-white text-black">
+      <Loader className="w-6 h-6 animate-spin text-gray-800" />
+    </div>;
   }
 
   return (
